@@ -1,14 +1,17 @@
 import discord
 
+from models.db_ops import DBOperation
 from models.exceptions import InvalidWinnerAmount, InvalidTimeException, InvalidRoleException
-from models.giveaway import valid_channels
 from discord.ext import commands
 from models.giveaway import Giveaway
 
 from models.config import Config
+from models.utils import valid_giveaway_channels
 
 cfg = Config()
 roles = cfg.roles
+channels = cfg.channels
+emoji = "🎉"
 
 
 def in_giveaway_channel():
@@ -17,7 +20,7 @@ def in_giveaway_channel():
     def predicate(ctx):
         """Predicate function for channel decorator
         :param ctx: The context of the command that invoked this"""
-        return ctx.channel.id in valid_channels
+        return ctx.channel.id in valid_giveaway_channels
 
     return commands.check(predicate)
 
@@ -47,18 +50,28 @@ class Giveaways(commands.Cog):
         await ctx.send(embed=embed)
         await ctx.message.delete()
 
-    @in_giveaway_channel()
+    # @in_giveaway_channel()
     @commands.guild_only()
-    @commands.has_any_role(roles["host"], roles["head_moderator"], roles["administrator"], roles["founder"],
-                           roles["bot_goat"])
+    # @commands.has_any_role(roles["host"], roles["head_moderator"], roles["administrator"], roles["founder"],
+    #                        roles["bot_goat"])
     @commands.command(name="gstart")
     async def _gstart(self, ctx, time, winners, role: discord.Role, *, prize):
+        message = await ctx.send("Creating Giveaway...")
         try:
-            message = await ctx.send("Creating Giveaway...")
             giveaway = Giveaway(message, ctx.author, self.bot.msq_req_active, time, winners, role, prize)
-        except InvalidWinnerAmount as iwa:
-            pass
+            await message.edit(content="", embed=giveaway.embed)
+            self.giveaways.append(giveaway)
+            db = await DBOperation.new()
+            await db.insert_giveaway(giveaway)
         except InvalidTimeException as ite:
-            pass
+            return await message.edit(content=ite.message)
+        except InvalidWinnerAmount as iwa:
+            return await message.edit(content=iwa.message)
         except InvalidRoleException as ire:
-            pass
+            return await message.edit(content=ire.message)
+        finally:
+            await ctx.message.delete()
+
+
+def setup(bot):
+    bot.add_cog(Giveaways(bot))
