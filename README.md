@@ -10,7 +10,7 @@ Project Started - 9th April 2020
   **Cogs (each cog is used as a separate module for the bot)**
   
   	- Commands
-      	- Giveaways
+	- Giveaways
       
   **Models (private classes and objects containing code the bot can access)**
 		
