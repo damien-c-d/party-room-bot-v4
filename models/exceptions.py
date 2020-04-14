@@ -10,7 +10,7 @@ class InvalidWinnerAmount(Exception):
 
 
 class InvalidRoleException(Exception):
-    def __init__(self, role):
+    def __init__(self, role=None):
         if role is None:
             self.message = "That role does not exist or has not been mentioned properly."
         else:

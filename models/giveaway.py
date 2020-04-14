@@ -4,7 +4,7 @@ from datetime import datetime
 from datetime import timedelta
 
 from models.db_ops import DBOperation
-from models.utils import get_winner_amt, get_end_date
+from models.utils import get_winner_amt, get_end_date, check_giveaway_role
 
 cfg = Config()
 data = cfg.data
@@ -12,9 +12,6 @@ roles = cfg.roles
 channels = cfg.channels
 message_req = data["msg_req"]
 emoji = "🎉"
-valid_roles = [roles["none"], roles["level_10"], roles["level_20"], roles["level_30"], roles["level_40"],
-               roles["level_50"], roles["wall_of_fame"], roles["nitro_booster"], roles["bot_goat"], roles["donator_5m"]]
-valid_channels = [channels["giveaways"], channels["staff_bot_room"], channels["important_bot_stuff"]]
 
 
 class Giveaway(object):
@@ -26,7 +23,6 @@ class Giveaway(object):
         self.guild = message.guild
         self.start_date = datetime.utcnow()
         self.msg_req = msg_req
-        self.role = role
         self.prize = prize
         self.end_date = get_end_date(time)
         if self.end_date is None or not self.end_date:
@@ -34,7 +30,9 @@ class Giveaway(object):
         else:
             self.timed = True
         self.winner_amt = get_winner_amt(winners)
+        self.role = check_giveaway_role(self.guild, role.id)
         self.embed = self.create_embed()
+        self.active = True
 
     def create_embed(self):
         embed = discord.Embed(color=discord.Color.green(),
@@ -81,3 +79,34 @@ class Giveaway(object):
     @staticmethod
     def remove_giveaway(param):
         pass
+
+    def __str__(self):
+        return f"""<Giveaway\n
+        <ID: {self.message.id}>
+        <Author Id: {self.author.id} Name: {self.author.display_name}>
+        <Channel  Id: {self.channel.id} Name: {self.channel.name}>
+        <Guild Id: {self.guild.id} Name: {self.guild.name}>
+        <Start Date: {self.start_date}>
+        <End Date: {self.end_date}>
+        <Msg_Req: {'enabled' if self.msg_req else 'disabled'}>
+        <Prize: {self.prize}>
+        <Winners: {self.winner_amt}>
+        <Role: {self.role}>
+        <Active: {'yes' if self.active else 'no'}>
+        <Embed: {self.embed}>
+        """
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __hash__(self):
+        return hash((self.message, self.author, self.channel, self.guild, self.winner_amt, self.prize,
+                     self.role, self.active, self.msg_req, self.start_date, self.end_date))
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return self.message == other.message and self.author == other.author and self.channel == other.channel and \
+               self.guild == other.guild and self.winner_amt == other.winner_amt and self.prize == other.prize and \
+               self.role == other.role and self.active == other.active and self.msg_req == other.msg_req and \
+               self.start_date == other.start_date and self.end_date == other.end_date
