@@ -5,6 +5,7 @@ GitHub Repo for Party Room Bot Version 4
 Project Started - 9th April 2020
 
 
+
 **Current Project Layout**
 
   **Cogs (each cog is used as a separate module for the bot)**
@@ -21,4 +22,7 @@ Project Started - 9th April 2020
 	- Giveaway (Reworked Giveaway Model for performance and cleaner code) *modified*
 	- Utils (File containing several utility functions required by the bot) *new*
       
-      
+  **Major Changes**
+  
+  	- Changed Database Library from psycopg2 to asyncpg
+
