@@ -22,3 +22,23 @@ class InvalidTimeException(Exception):
         self.message = f"Invalid giveaway time specified. Time must be a number followed by either:\n" \
                        f"'s' for seconds, 'm' for minutes, 'h' for hours, 'd' for days, 'w' for weeks.\n" \
                        f"Or you can use '1n' for a non-timed giveaway."
+
+
+class NoActiveGiveawaysException(Exception):
+    def __init__(self):
+        self.message = f"No Active giveaways were found."
+
+
+class WinnerPoolNotFoundException(Exception):
+    def __init__(self, giveaway_id):
+        self.message = f"No winner pool was found for giveaway with ID: {giveaway_id}"
+
+
+class BlackListEmptyException(Exception):
+    def __init__(self):
+        self.message = f"Blacklist is currently empty."
+
+
+class EmbedIsNoneException(Exception):
+    def __init__(self, giveaway_id):
+        self.message = f"Embed is None for giveaway with ID: {giveaway_id}"

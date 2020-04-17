@@ -1,10 +1,11 @@
+import asyncpg
 import discord
 from models.config import Config
 from datetime import datetime
 from datetime import timedelta
 
 from models.db_ops import DBOperation
-from models.utils import get_winner_amt, get_end_date, check_giveaway_role
+from models.utils import get_winner_amt, get_end_date, get_giveaway_role
 
 cfg = Config()
 data = cfg.data
@@ -21,17 +22,26 @@ class Giveaway(object):
         self.author = author
         self.channel = message.channel
         self.guild = message.guild
-        self.start_date = datetime.utcnow()
+        self.start_date = datetime.now()
         self.msg_req = msg_req
         self.prize = prize
-        self.end_date = get_end_date(time)
+        if isinstance(time, datetime):
+            self.end_date = time
+        else:
+            self.end_date = get_end_date(time)
         if self.end_date is None or not self.end_date:
             self.timed = False
         else:
             self.timed = True
-        self.winner_amt = get_winner_amt(winners)
-        self.role = check_giveaway_role(self.guild, role.id)
-        self.embed = self.create_embed()
+        if isinstance(winners, int):
+            self.winner_amt = winners
+        else:
+            self.winner_amt = get_winner_amt(winners)
+        self.role = role
+        if self.message.embeds and self.message.embeds is not None:
+            self.embed = self.message.embeds[0]
+        else:
+            self.embed = self.create_embed()
         self.active = True
 
     def create_embed(self):
@@ -51,14 +61,16 @@ class Giveaway(object):
 
     @classmethod
     async def get_existing(cls, guild, ga):
-        author = guild.get_member(ga[1])
-        channel = guild.get_channel(ga[2])
-        message = await channel.history().get(id=ga[0])
+        print(ga)
+        author = guild.get_member(ga.get("author_id"))
+        channel = guild.get_channel(ga.get("channel_id"))
+        message = await channel.history().get(id=ga.get("giveaway_id"))
         if message is None:
-            await cls.remove_giveaway(ga[0])
+            await cls.remove_giveaway(ga.get("giveaway_id"))
             return None
-        role = guild.get_role(ga[4])
-        return cls(message, author, ga[7], ga[9], ga[3], role, ga[5])
+        role = guild.get_role(ga.get("role_id"))
+
+        return cls(message, author, ga.get("msg_limited"), ga.get("end_date"), ga.get("winners"), role, ga.get("prize"))
 
     @staticmethod
     def get_timer(end_date):
@@ -68,7 +80,9 @@ class Giveaway(object):
         try:
             if end_date is None:
                 return "Not Timed."
+            print(end_date)
             total_seconds = (end_date - datetime.now()).total_seconds()
+            print(total_seconds)
             d = datetime(1, 1, 1) + timedelta(seconds=total_seconds)
             return str("**%d** Days, **%d** Hours, **%d** Minutes, **%d** Seconds"
                        % (d.day - 1, d.hour, d.minute, d.second))
@@ -77,8 +91,10 @@ class Giveaway(object):
                   f"{e}")
 
     @staticmethod
-    def remove_giveaway(param):
-        pass
+    async def remove_giveaway(message_id):
+        db = await DBOperation.new()
+        await db.remove_giveaway(message_id)
+        await db.close()
 
     def __str__(self):
         return f"""<Giveaway\n

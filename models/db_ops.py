@@ -3,6 +3,7 @@ import ssl
 import asyncpg
 
 from models.config import Config
+from models.exceptions import NoActiveGiveawaysException, WinnerPoolNotFoundException, BlackListEmptyException
 
 data = Config().data
 db_url = data["db_url"]
@@ -22,10 +23,10 @@ class DBOperation:
         con = await asyncpg.connect(db_url, ssl=ctx)
         return cls(con)
 
-    async def remove_giveaway(self, giveaway):
+    async def remove_giveaway(self, giveaway_id):
         await self.con.execute("""
         DELETE FROM new_giveaways where giveaway_id=$1
-        """, giveaway.message.id)
+        """, giveaway_id)
 
     async def insert_giveaway(self, giveaway):
         await self.con.execute("""
@@ -38,15 +39,71 @@ class DBOperation:
 
     async def update_giveaway(self, giveaway):
         await self.con.execute("""
-        UPDATE new_giveaways SET giveaway_id=$1, author_id=$2, channel_id=$3, guild_id=$4, winners=$5, role_id=$6,
-         prize=$7, active=$8, msg_limited=$9, create_date=$10, end_date=$11
+        UPDATE new_giveaways SET author_id=$2, channel_id=$3, guild_id=$4, winners=$5, role_id=$6,
+         prize=$7, active=$8, msg_limited=$9, create_date=$10, end_date=$11 WHERE giveaway_id=$1
         """, giveaway.message.id, giveaway.author.id, giveaway.channel.id, giveaway.guild.id, giveaway.winner_amt,
                                giveaway.role.id, giveaway.prize, True, giveaway.msg_req, giveaway.start_date,
                                giveaway.end_date)
 
     async def get_all_active(self):
-        return await self.con.fetch("""
-        SELECT * FROM new_giveaways where active=$1""", True)
+        x = await self.con.fetch("""
+        SELECT * FROM new_giveaways where active=$1 and guild_id=$2""", True, 593320299773165578)
+        if x is not None:
+            return x
+        else:
+            raise NoActiveGiveawaysException()
+
+    async def get_winner_pool(self, giveaway_id):
+        x = await self.con.fetchrow("""
+        SELECT * FROM winner_pool WHERE giveaway=$1""", giveaway_id)
+        if x is not None:
+            return x
+        else:
+            raise WinnerPoolNotFoundException(giveaway_id)
+
+    async def get_blacklist(self):
+        x = await self.con.fetch("""
+        SELECT * FROM blacklist
+        """)
+        if x is not None:
+            return x
+        else:
+            raise BlackListEmptyException()
+
+    async def get_active_blacklists(self):
+        x = await self.get_blacklist()
+        active = [y for y in x if y.get("status")]
+        if active and active is not None:
+            return active
+        else:
+            return None
+
+    async def get_inactive_blacklists(self):
+        x = await self.get_blacklist()
+        inactive = [z for z in x if not z.get("status")]
+        if inactive and inactive is not None:
+            return inactive
+        else:
+            return None
+
+    async def end_giveaway(self, giveaway_id):
+        await self.con.execute("""
+        UPDATE new_giveaways SET active=$1 WHERE giveaway_id=$2
+        """, False, giveaway_id)
+
+    async def add_to_pool(self, giveaway_id, user_id):
+        x = await self.con.fetchrow("""SELECT * FROM winner_pool WHERE giveaway=$1""", giveaway_id)
+        if x is None:
+            await self.con.execute("""INSERT INTO winner_pool (giveaway, pool) VALUES ($1, $2)""",
+                                   giveaway_id, [user_id])
+        else:
+            pool = x.get("pool")
+            if user_id not in pool:
+                pool.append(user_id)
+                await self.con.execute("""UPDATE winner_pool SET pool=$1 WHERE giveaway=$2""",
+                                       pool, giveaway_id)
+            else:
+                return
 
     async def close(self):
         await self.con.close()

@@ -25,4 +25,7 @@ class Bot(commands.Bot):
         await self.change_presence(status=discord.Status.idle,
                                    activity=discord.Activity(type=discord.ActivityType.listening,
                                                              name=f"Commands: !help - Version {self.version}"))
+        giveaways = self.get_cog("Giveaways")
         print(f"Bot logged in as {self.user.name}")
+        await giveaways.giveaway_handler.start()
+

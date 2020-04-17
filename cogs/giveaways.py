@@ -1,12 +1,16 @@
+from datetime import datetime
+
 import discord
 
 from models.db_ops import DBOperation
-from models.exceptions import InvalidWinnerAmount, InvalidTimeException, InvalidRoleException
-from discord.ext import commands
+from models.exceptions import InvalidWinnerAmount, InvalidTimeException, InvalidRoleException, EmbedIsNoneException, \
+    NoActiveGiveawaysException
+from discord.ext import commands, tasks
 from models.giveaway import Giveaway
 
 from models.config import Config
-from models.utils import valid_giveaway_channels
+from models.utils import valid_giveaway_channels, update_embed_field, choose_giveaway_winners, \
+    get_giveaway_role, check_blacklist, check_message_count, add_user_to_pool
 
 cfg = Config()
 roles = cfg.roles
@@ -60,9 +64,11 @@ class Giveaways(commands.Cog):
         try:
             giveaway = Giveaway(message, ctx.author, self.bot.msq_req_active, time, winners, role, prize)
             await message.edit(content="", embed=giveaway.embed)
+            await message.add_reaction(emoji=emoji)
             self.giveaways.append(giveaway)
             db = await DBOperation.new()
             await db.insert_giveaway(giveaway)
+            await db.close()
         except InvalidTimeException as ite:
             return await message.edit(content=ite.message)
         except InvalidWinnerAmount as iwa:
@@ -71,6 +77,105 @@ class Giveaways(commands.Cog):
             return await message.edit(content=ire.message)
         finally:
             await ctx.message.delete()
+
+    @tasks.loop(seconds=20)
+    async def giveaway_handler(self):
+        if not self.giveaways:
+            pass
+        else:
+            try:
+                await self.bot.wait_until_ready()
+                for giveaway in self.giveaways:
+                    if giveaway and giveaway is not None:
+                        if giveaway.message is not None:
+                            if giveaway.end_date > datetime.now():
+                                time_remaining = Giveaway.get_timer(giveaway.end_date)
+                                new_embed = await update_embed_field(giveaway.embed, 2, "Time Remaining",
+                                                                     time_remaining)
+                                if new_embed is not None:
+                                    await giveaway.message.edit(embed=new_embed)
+                                else:
+                                    raise EmbedIsNoneException(giveaway.message.id)
+                            else:
+                                winners = await choose_giveaway_winners(giveaway.message.id, giveaway.winner_amt)
+                                if not winners or winners is None:
+                                    final_embed = await update_embed_field(giveaway.embed, 2,
+                                                                           "Giveaway has ended. Could not determine a "
+                                                                           "winner",
+                                                                           discord.Embed.Empty)
+                                    await giveaway.message.edit(embed=final_embed)
+                                else:
+                                    winner_str = ""
+                                    for index, winner in enumerate(winners):
+                                        winner = giveaway.guild.get_member(winner)
+                                        winner_str += f"> {index + 1}. {winner.mention}\n"
+                                    final_embed = await update_embed_field(giveaway.embed, 2,
+                                                                           "Giveaway has ended! Winners were:",
+                                                                           winner_str)
+                                    await giveaway.message.edit(embed=final_embed)
+                                    await giveaway.channel.send(
+                                        f"{giveaway.author.display_name}'s {giveaway.prize} "
+                                        f"giveaway has ended! The winners were:\n" + winner_str)
+                                await self.end_giveaway(giveaway)
+
+            except Exception as ex:
+                print(ex)
+
+    @giveaway_handler.before_loop
+    async def load_giveaways(self):
+        try:
+            db = await DBOperation.new()
+            active_giveaways = await db.get_all_active()
+            for result in active_giveaways:
+                giveaway = await Giveaway.get_existing(self.bot.get_guild(result.get("guild_id")), result)
+                if giveaway is not None:
+                    self.giveaways.append(giveaway)
+            await db.close()
+        except NoActiveGiveawaysException as na_ex:
+            print("No active giveaways")
+            pass
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload):
+        await self.bot.wait_until_ready()
+        guild = self.bot.get_guild(payload.guild_id)
+        member = guild.get_member(payload.user_id)
+        if member.bot:
+            return
+        none_role = guild.get_role(roles["testicle"])
+        if not self.giveaways or self.giveaways is None:
+            return
+        if str(payload.emoji) == emoji:
+            giveaway = list(filter(lambda g: g.message.id == payload.message_id, self.giveaways))[0]
+
+            if giveaway is not None:
+                if not await check_blacklist(payload.user_id):
+                    if giveaway.role != none_role and giveaway.role not in member.roles:
+                        try:
+                            await giveaway.message.remove_reaction(emoji, member)
+                            return await member.send("You don't have the required role for this giveaway")
+                        except discord.Forbidden:
+                            return
+                    else:
+                        if giveaway.msg_req:
+                            if not check_message_count(giveaway, payload.user_id) and \
+                                    (await get_giveaway_role(guild, 611034264581963777)) not in member.roles:
+                                try:
+                                    await giveaway.message.remove_reaction(emoji, member)
+                                    return await member.send(
+                                        "Sorry fam, you gotta be more active in the discord to enter!"
+                                        "\n`Disclaimer: Spammers will be blacklisted`")
+                                except discord.Forbidden:
+                                    return
+                            else:
+                                await add_user_to_pool(giveaway, payload.user_id)
+                        else:
+                            await add_user_to_pool(giveaway, payload.user_id)
+
+    async def end_giveaway(self, giveaway):
+        giveaway.active = False
+        await giveaway.remove_giveaway()
+        self.giveaways.remove(giveaway)
 
 
 def setup(bot):
