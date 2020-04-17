@@ -83,14 +83,19 @@ async def check_message_count(giveaway, user):
         return False
 
 
-def get_giveaway_role(guild, role_id):
+def get_role(guild, role_id):
     x = discord.utils.get(guild.roles, id=role_id)
-    if role_id not in valid_giveaway_roles:
-        raise InvalidRoleException(x)
     if x is None:
-        raise InvalidRoleException()
+        return None
     else:
         return x
+
+
+def check_giveaway_role(role):
+    if role.id not in valid_giveaway_roles:
+        raise InvalidRoleException()
+    else:
+        return True
 
 
 async def add_reactions(message: discord.Message, emojis):

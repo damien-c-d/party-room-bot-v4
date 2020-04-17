@@ -1,11 +1,10 @@
-import asyncpg
 import discord
 from models.config import Config
 from datetime import datetime
 from datetime import timedelta
 
 from models.db_ops import DBOperation
-from models.utils import get_winner_amt, get_end_date, get_giveaway_role
+from models.utils import get_winner_amt, get_end_date, check_giveaway_role
 
 cfg = Config()
 data = cfg.data
@@ -37,7 +36,8 @@ class Giveaway(object):
             self.winner_amt = winners
         else:
             self.winner_amt = get_winner_amt(winners)
-        self.role = role
+        if check_giveaway_role(role):
+            self.role = role
         if self.message.embeds and self.message.embeds is not None:
             self.embed = self.message.embeds[0]
         else:
@@ -58,6 +58,11 @@ class Giveaway(object):
         embed.insert_field_at(index=1, name="Winners:", value=str(self.winner_amt), inline=True)
         embed.insert_field_at(index=2, name="Time Remaining:", value=time_remaining, inline=False)
         return embed
+
+    @staticmethod
+    async def get_message(guild, channel_id, message_id):
+        channel = guild.get_channel(channel_id)
+        return await channel.history().get(id=message_id)
 
     @classmethod
     async def get_existing(cls, guild, ga):
