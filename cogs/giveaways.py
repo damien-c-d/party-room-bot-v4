@@ -79,6 +79,7 @@ class Giveaways(commands.Cog):
             return await message.edit(content=f"Giveaway creation failed reason: Invalid Role\n"
                                               f"```{ire.message}```", delete_after=60)
         finally:
+
             await ctx.message.delete()
 
     @tasks.loop(seconds=10)
