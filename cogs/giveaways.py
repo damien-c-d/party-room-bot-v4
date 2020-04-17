@@ -82,6 +82,11 @@ class Giveaways(commands.Cog):
 
             await ctx.message.delete()
 
+    @commands.command(name="gend")
+    async def _g_end(self, giveaway_id):
+        giveaway = list(filter(lambda g: g.message.id == giveaway_id, self.giveaways))[0]
+        await self.end_giveaway(giveaway)
+
     @tasks.loop(seconds=10)
     async def giveaway_handler(self):
         if not self.giveaways:
