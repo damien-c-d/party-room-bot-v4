@@ -111,7 +111,7 @@ class Commands(commands.Cog):
 
     @in_channels(valid_donation_channels)
     @commands.guild_only()
-    @commands.command(name="dupdate", aliases=["donationupdate","updatedonation"])
+    @commands.command(name="dupdate", aliases=["donationupdate", "updatedonation"])
     async def donation_update_(self, ctx, member: discord.Member, amount):
         db = await DBOperation.new()
         try:
@@ -133,6 +133,46 @@ class Commands(commands.Cog):
                                f"Thats equivalent to {(float(total / 1000) / 5)} Recruitment Drops or"
                                f" {(float(total / 1000) / 40)} WoF Drops.")
             check_donation_roles(ctx.guild, member, total)
+        finally:
+            await db.close()
+            await ctx.message.delete()
+
+    @in_channels(valid_donation_channels)
+    @commands.guild_only()
+    @commands.command(name="top", aliases=["top donations", "topdonations", "topdonators", "topdonors"])
+    async def top_(self, ctx):
+        db = await DBOperation.new()
+        try:
+            donations = await db.get_top_10_donors()
+            embed = create_embed(title=f"{ctx.guild.name}'s Top Donors", color=discord.Color.blue())
+            for donor in donations:
+                member = self.bot.get_user(donor[1])
+                if member is not None:
+                    embed.add_field(name=f"👑 {donor[0]}. {member.display_name}",
+                                    value=f"Amount Donated: {donor[2]}")
+                else:
+                    embed.add_field(name=f"👑 {donor[0]}. deleted-user",
+                                    value=f"Amount Donated: {donor[2]}")
+            await ctx.send(embed=embed)
+        finally:
+            await db.close()
+            await ctx.message.delete()
+
+    @in_channels(valid_donation_channels)
+    @commands.guild_only()
+    @commands.command(name="dall", aliases=["all donations", "alldonations", "alldonators", "alldonors"])
+    async def all_donors(self, ctx):
+        db = await DBOperation.new()
+        try:
+            donations = await db.get_all_donations()
+            text = "All Donators:\n\n"
+            for index, donor in enumerate(donations):
+                user = self.bot.get_user(donor.get("user_id"))
+                if user is not None:
+                    text += f"> 👑 {index + 1}. {user.mention}: {format_from_k(donor.get('amount'))}\n"
+                else:
+                    text += f"> 👑 {index + 1}. deleted-user: {format_from_k(donor.get('amount'))}\n"
+            await ctx.send(text)
         finally:
             await db.close()
             await ctx.message.delete()

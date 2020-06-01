@@ -5,6 +5,7 @@ import asyncpg
 
 from models.config import Config
 from models.exceptions import NoActiveGiveawaysException, WinnerPoolNotFoundException, BlackListEmptyException
+from models.utils import format_from_k
 
 data = Config().data
 db_url = data["db_url"]
@@ -132,6 +133,23 @@ class DBOperation:
     async def add_new_donation(self, amount, user_id):
         await self.con.execute("""INSERT INTO donations (user_id, amount, count) VALUES ($1, $2, $3)""",
                                user_id, amount, 1)
+
+    async def get_top_10_donors(self):
+        x = await self.con.fetch("""SELECT * FROM donations ORDER BY amount DESC LIMIT 10""")
+        if x is not None:
+            donations = []
+            for index, donor in enumerate(x):
+                donations.append((index+1, donor.get("user_id"), format_from_k(donor.get("amount"))))
+            return donations
+        else:
+            return None
+
+    async def get_all_donations(self, ctx):
+        x = await self.con.fetch("""SELECT * FROM donations ORDER BY amount DESC""")
+        if x is not None:
+            return x
+        else:
+            return None
 
     async def close(self):
         await self.con.close()
