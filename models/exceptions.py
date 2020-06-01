@@ -14,20 +14,14 @@ class InvalidRoleException(Exception):
         if role is None:
             self.message = "That role does not exist or has not been mentioned properly."
         else:
-            self.message = "That role cannot be used in a giveaway, please check the pinned message in #giveaways for" \
-                           "available roles."
+            self.message = "That role cannot be used in this command."
 
 
 class InvalidTimeException(Exception):
     def __init__(self, time):
-        self.message = f"Incorrect giveaway time specified. Here are the options:\n" \
-                       f"#s = 1 second\n" \
-                       f"#m = 1 minute\n" \
-                       f"#h = 1 hour\n" \
-                       f"#d = 1 day\n" \
-                       f"#w = 1 week\n" \
-                       f"#n = Untimed Giveaway (requires manual end)\n" \
-                       f"*Replace # with a whole number*"
+        self.message = f"Invalid giveaway time specified. Time must be a number followed by either:\n" \
+                       f"'s' for seconds, 'm' for minutes, 'h' for hours, 'd' for days, 'w' for weeks.\n" \
+                       f"Or you can use '1n' for a non-timed giveaway."
 
 
 class NoActiveGiveawaysException(Exception):

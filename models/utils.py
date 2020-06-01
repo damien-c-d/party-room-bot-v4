@@ -2,6 +2,7 @@ import random
 from datetime import timedelta, datetime
 
 import discord
+from discord.ext import commands
 
 from models.config import Config
 from models.db_ops import DBOperation
@@ -24,6 +25,8 @@ valid_giveaway_roles = [roles["none"], roles["level_10"], roles["level_20"], rol
                         roles["level_50"], roles["wall_of_fame"], roles["nitro_booster"], roles["bot_goat"],
                         roles["donator_5m"], 700159318682632362]
 
+valid_donation_channels = [channels["community_chest"], channels["staff_bot_room"], channels["important_bot_stuff"]]
+
 to_seconds = {
     "s": 1,
     "m": 60,
@@ -32,6 +35,28 @@ to_seconds = {
     "w": 604800,
     "n": -10
 }
+
+
+def in_channel(ch_id):
+    """Function for channel check"""
+
+    def predicate(ctx):
+        """Predicate function for channel decorator
+        :param ctx: The context of the command that invoked this"""
+        return ctx.channel.id == ch_id
+
+    return commands.check(predicate)
+
+
+def in_channels(ch_ids):
+    """Function for giveaway channel decorator"""
+
+    def predicate(ctx):
+        """Predicate function for channel decorator
+        :param ctx: The context of the command that invoked this"""
+        return ctx.channel.id in ch_ids
+
+    return commands.check(predicate)
 
 
 def get_end_date(time):
@@ -83,19 +108,14 @@ async def check_message_count(giveaway, user):
         return False
 
 
-def get_role(guild, role_id):
+def get_giveaway_role(guild, role_id):
     x = discord.utils.get(guild.roles, id=role_id)
+    if role_id not in valid_giveaway_roles:
+        raise InvalidRoleException(x)
     if x is None:
-        return None
-    else:
-        return x
-
-
-def check_giveaway_role(role):
-    if role.id not in valid_giveaway_roles:
         raise InvalidRoleException()
     else:
-        return True
+        return x
 
 
 async def add_reactions(message: discord.Message, emojis):
@@ -105,12 +125,14 @@ async def add_reactions(message: discord.Message, emojis):
 
 async def check_blacklist(user):
     db = await DBOperation.new()
-    if user not in await db.get_active_blacklists():
+    try:
+        if user not in await db.get_active_blacklists():
+            await db.close()
+            return False
+        else:
+            return True
+    finally:
         await db.close()
-        return False
-    else:
-        await db.close()
-        return True
 
 
 async def update_embed_field(embed, index, name, value):
@@ -123,24 +145,91 @@ async def update_embed_field(embed, index, name, value):
 
 async def add_user_to_pool(giveaway, user_id):
     db = await DBOperation.new()
-    await db.add_to_pool(giveaway.message.id, user_id)
-    await db.close()
+    try:
+        await db.add_to_pool(giveaway.message.id, user_id)
+    finally:
+        await db.close()
 
 
 async def choose_giveaway_winners(giveaway_id, winners):
     final_winners = []
     db = await DBOperation.new()
-    pool = (await db.get_winner_pool(giveaway_id)).get("pool")
-    if len(pool) < winners:
-        winners = len(pool)
-    while len(final_winners) < winners:
-        random.shuffle(pool)
-        choice = random.choice(pool)
-        if not await check_blacklist(choice):
-            final_winners.append(choice)
-            pool.remove(choice)
+    try:
+        pool = (await db.get_winner_pool(giveaway_id)).get("pool")
+        if len(pool) < winners:
+            winners = len(pool)
+        while len(final_winners) < winners:
+            random.shuffle(pool)
+            choice = random.choice(pool)
+            if not await check_blacklist(choice):
+                final_winners.append(choice)
+                pool.remove(choice)
+            else:
+                pool.remove(choice)
+                continue
+        return final_winners
+    finally:
+        await db.close()
+
+
+
+def format_to_k(amount):
+    # takes amount as string from message.content
+    # returns an integer in K
+    if (amount[-1:]).lower() == "m":
+        return int(float(str(amount[:-1])) * 1000)
+    elif (amount[-1:]).lower() == "k":
+        return int(str(amount[:-1]))
+    elif (amount[-1:]).lower() == "b":
+        return int(float(str(amount[:-1])) * 1000000)
+    else:
+        return int(float(amount) * 1000)
+
+
+def format_from_k(amount):
+    # takes amount as integer in K
+    # returns a string to be printed
+    if amount >= 1000000:
+        if len(str(amount)) == 7:
+            return '{0:.3g}'.format(amount * 0.000001) + "B"
+        elif len(str(amount)) == 8:
+            return '{0:.4g}'.format(amount * 0.000001) + "B"
         else:
-            pool.remove(choice)
-            continue
-    await db.close()
-    return final_winners
+            return '{0:.5g}'.format(amount * 0.000001) + "B"
+    elif amount >= 1000:
+        if len(str(amount)) == 4:
+            return '{0:.3g}'.format(amount * 0.001) + "M"
+        elif len(str(amount)) == 5:
+            return '{0:.4g}'.format(amount * 0.001) + "M"
+        elif len(str(amount)) == 6:
+            return '{0:.5g}'.format(amount * 0.001) + "M"
+    else:
+        return str(amount) + "k"
+
+
+def mention_role(guild: discord.Guild, role: int):
+    role: discord.Role = guild.get_role(role)
+    return role.mention
+
+
+def create_embed(title, description=None, color=discord.Color.red(), inline=False, *args):
+    try:
+        embed = discord.Embed(title=title, description=description, color=color)
+        for arg in args:
+            embed.add_field(name=str(arg[0]), value=str(arg[1]), inline=inline)
+        embed.timestamp = datetime.utcnow()
+        return embed
+    except Exception:
+        return None
+
+
+def create_author_embed(author, icon_url, color=discord.Color.red(), inline=False, *args):
+    try:
+        embed = discord.Embed(color=color)
+        embed.set_author(name=author, icon_url=icon_url)
+        for arg in args:
+            embed.add_field(name=str(arg[0]), value=str(arg[1]), inline=inline)
+        embed.timestamp = datetime.utcnow()
+        return embed
+    except Exception:
+        return None

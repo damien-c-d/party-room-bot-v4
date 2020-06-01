@@ -1,4 +1,5 @@
 import ssl
+from datetime import datetime
 
 import asyncpg
 
@@ -104,6 +105,25 @@ class DBOperation:
                                        pool, giveaway_id)
             else:
                 return
+
+    async def get_user_donations(self, user_id):
+        x = await self.con.fetchrow("""SELECT * FROM donations WHERE user_id=$1""",
+                                    user_id)
+        if x is not None:
+            return x.get("amount")
+        else:
+            return None
+
+    async def get_community_chest(self):
+        x = await self.con.fetchrow("""SELECT * FROM community_chest""")
+        if x is not None:
+            return [x.get("amount"), x.get("last_updated")]
+        else:
+            return None
+
+    async def update_community_chest(self, new_amt):
+        await self.con.execute("""UPDATE community_chest SET amount=$1, last_updated=$2""",
+                               new_amt, datetime.now())
 
     async def close(self):
         await self.con.close()
