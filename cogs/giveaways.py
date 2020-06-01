@@ -54,10 +54,10 @@ class Giveaways(commands.Cog):
         await ctx.send(embed=embed)
         await ctx.message.delete()
 
-    # @in_giveaway_channel()
+    @in_giveaway_channel()
     @commands.guild_only()
-    # @commands.has_any_role(roles["host"], roles["head_moderator"], roles["administrator"], roles["founder"],
-    #                        roles["bot_goat"])
+    @commands.has_any_role(roles["host"], roles["head_moderator"], roles["administrator"], roles["founder"],
+                           roles["bot_goat"])
     @commands.command(name="gstart")
     async def _gstart(self, ctx, time, winners, role: discord.Role, *, prize):
         message = await ctx.send("Creating Giveaway...")

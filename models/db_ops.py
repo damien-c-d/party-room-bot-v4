@@ -125,5 +125,13 @@ class DBOperation:
         await self.con.execute("""UPDATE community_chest SET amount=$1, last_updated=$2""",
                                new_amt, datetime.now())
 
+    async def update_donations(self, new_amt, user_id):
+        await self.con.execute("""UPDATE donations SET amount=$1 WHERE user_id=$2""",
+                               new_amt, user_id)
+
+    async def add_new_donation(self, amount, user_id):
+        await self.con.execute("""INSERT INTO donations (user_id, amount, count) VALUES ($1, $2, $3)""",
+                               user_id, amount, 1)
+
     async def close(self):
         await self.con.close()

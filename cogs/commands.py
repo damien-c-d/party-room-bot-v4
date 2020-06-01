@@ -3,7 +3,7 @@ from discord.ext import commands
 
 from models.db_ops import DBOperation
 from models.utils import valid_donation_channels, in_channels, format_to_k, format_from_k, roles, mention_role, \
-    create_embed, create_author_embed
+    create_embed, create_author_embed, check_donation_roles
 
 
 class Commands(commands.Cog):
@@ -109,7 +109,33 @@ class Commands(commands.Cog):
             await db.close()
             await ctx.message.delete()
 
-
+    @in_channels(valid_donation_channels)
+    @commands.guild_only()
+    @commands.command(name="dupdate", aliases=["donationupdate","updatedonation"])
+    async def donation_update_(self, ctx, member: discord.Member, amount):
+        db = await DBOperation.new()
+        try:
+            if member is None:
+                return await ctx.send("Invalid member mentioned.")
+            donations = await db.get_user_donations(member.id)
+            if donations is not None:
+                total = donations[0] + format_to_k(amount)
+                await db.update_donations(total, member.id)
+                await ctx.send(f"{member.mention}'s donations updated. Thanks for donating <3\n"
+                               f"New Total: {format_from_k(total)}\n\n"
+                               f"Thats equivalent to {(float(total / 1000) / 5)} Recruitment Drops or"
+                               f" {(float(total / 1000) / 40)} WoF Drops.")
+            else:
+                total = format_to_k(amount)
+                await db.add_new_donation(amount, member.id)
+                await ctx.send(f"{member.mention} donated for the first time! Thanks for donating <3\n"
+                               f"New Total: {format_from_k(total)}\n\n"
+                               f"Thats equivalent to {(float(total / 1000) / 5)} Recruitment Drops or"
+                               f" {(float(total / 1000) / 40)} WoF Drops.")
+            check_donation_roles(ctx.guild, member, total)
+        finally:
+            await db.close()
+            await ctx.message.delete()
 
 
 def setup(bot):

@@ -172,7 +172,6 @@ async def choose_giveaway_winners(giveaway_id, winners):
         await db.close()
 
 
-
 def format_to_k(amount):
     # takes amount as string from message.content
     # returns an integer in K
@@ -233,3 +232,28 @@ def create_author_embed(author, icon_url, color=discord.Color.red(), inline=Fals
         return embed
     except Exception:
         return None
+
+
+def check_donation_roles(guild, member, amount):
+    five_m = guild.get_role(roles["donator_5m"])
+    ten_m = guild.get_role(roles["donator_10m"])
+    twenty5_m = guild.get_role(roles["donator_25m"])
+    fifty_m = guild.get_role(roles["donator_50m"])
+    seventy5_m = guild.get_role(roles["donator_75m"])
+    hundred_m = guild.get_role(roles["donator_100m"])
+    twofifty_m = guild.get_role(roles["donator_250m"])
+
+    if amount >= 5000 and five_m not in member.roles:
+        await member.add_roles(five_m)
+    if amount >= 10000 and ten_m not in member.roles:
+        await member.add_roles(ten_m)
+    if amount >= 25000 and twenty5_m not in member.roles:
+        await member.add_roles(twenty5_m)
+    if amount >= 50000 and fifty_m not in member.roles:
+        await member.add_roles(fifty_m)
+    if amount >= 75000 and seventy5_m not in member.roles:
+        await member.add_roles(seventy5_m)
+    if amount >= 100000 and hundred_m not in member.roles:
+        await member.add_roles(hundred_m)
+    if amount >= 250000 and twofifty_m not in member.roles:
+        await member.add_roles(twofifty_m)
