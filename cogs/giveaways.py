@@ -59,7 +59,7 @@ class Giveaways(commands.Cog):
     @commands.has_any_role(roles["host"], roles["head_moderator"], roles["administrator"], roles["founder"],
                            roles["bot_goat"])
     @commands.command(name="gstart")
-    async def _gstart(self, ctx, time, winners, role: discord.Role, *, prize):
+    async def gstart_(self, ctx, time, winners, role: discord.Role, *, prize):
         message = await ctx.send("Creating Giveaway...")
         db = await DBOperation.new()
         try:
@@ -74,6 +74,21 @@ class Giveaways(commands.Cog):
             return await message.edit(content=iwa.message)
         except InvalidRoleException as ire:
             return await message.edit(content=ire.message)
+        finally:
+            await db.close()
+            await ctx.message.delete()
+
+    @in_giveaway_channel()
+    @commands.guild_only()
+    @commands.has_any_role(roles["host"], roles["head_moderator"], roles["administrator"], roles["founder"],
+                           roles["bot_goat"])
+    @commands.command(name="gend", aliases=["endgiveaway", "giveawayend"])
+    async def gend_(self, ctx, giveaway_id):
+        db = await DBOperation.new()
+        try:
+            ga = await db.get_giveaway(giveaway_id)
+            giveaway = await Giveaway.get_existing(ctx.guild, ga)
+            await self.end_giveaway(giveaway)
         finally:
             await db.close()
             await ctx.message.delete()
@@ -97,25 +112,6 @@ class Giveaways(commands.Cog):
                                 else:
                                     raise EmbedIsNoneException(giveaway.message.id)
                             else:
-                                winners = await choose_giveaway_winners(giveaway.message.id, giveaway.winner_amt)
-                                if not winners or winners is None:
-                                    final_embed = await update_embed_field(giveaway.embed, 2,
-                                                                           "Giveaway has ended. Could not determine a "
-                                                                           "winner",
-                                                                           discord.Embed.Empty)
-                                    await giveaway.message.edit(embed=final_embed)
-                                else:
-                                    winner_str = ""
-                                    for index, winner in enumerate(winners):
-                                        winner = giveaway.guild.get_member(winner)
-                                        winner_str += f"> {index + 1}. {winner.mention}\n"
-                                    final_embed = await update_embed_field(giveaway.embed, 2,
-                                                                           "Giveaway has ended! Winners were:",
-                                                                           winner_str)
-                                    await giveaway.message.edit(embed=final_embed)
-                                    await giveaway.channel.send(
-                                        f"{giveaway.author.display_name}'s {giveaway.prize} "
-                                        f"giveaway has ended! The winners were:\n" + winner_str)
                                 await self.end_giveaway(giveaway)
 
             except Exception as ex:
@@ -175,6 +171,25 @@ class Giveaways(commands.Cog):
                             await add_user_to_pool(giveaway, payload.user_id)
 
     async def end_giveaway(self, giveaway):
+        winners = await choose_giveaway_winners(giveaway.message.id, giveaway.winner_amt)
+        if not winners or winners is None:
+            final_embed = await update_embed_field(giveaway.embed, 2,
+                                                   "Giveaway has ended. Could not determine a "
+                                                   "winner",
+                                                   discord.Embed.Empty)
+            await giveaway.message.edit(embed=final_embed)
+        else:
+            winner_str = ""
+            for index, winner in enumerate(winners):
+                winner = giveaway.guild.get_member(winner)
+                winner_str += f"> {index + 1}. {winner.mention}\n"
+            final_embed = await update_embed_field(giveaway.embed, 2,
+                                                   "Giveaway has ended! Winners were:",
+                                                   winner_str)
+            await giveaway.message.edit(embed=final_embed)
+            await giveaway.channel.send(
+                f"{giveaway.author.display_name}'s {giveaway.prize} "
+                f"giveaway has ended! The winners were:\n" + winner_str)
         giveaway.active = False
         await giveaway.remove_giveaway()
         self.giveaways.remove(giveaway)

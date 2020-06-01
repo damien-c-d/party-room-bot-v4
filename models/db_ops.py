@@ -47,6 +47,10 @@ class DBOperation:
                                giveaway.role.id, giveaway.prize, True, giveaway.msg_req, giveaway.start_date,
                                giveaway.end_date)
 
+    async def get_giveaway(self, giveaway_id):
+        return await self.con.fetchrow("""SELECT * FROM new_giveaways WHERE giveaway_id=$1""",
+                                       giveaway_id)
+
     async def get_all_active(self):
         x = await self.con.fetch("""
         SELECT * FROM new_giveaways where active=$1 and guild_id=$2""", True, 593320299773165578)
@@ -139,7 +143,7 @@ class DBOperation:
         if x is not None:
             donations = []
             for index, donor in enumerate(x):
-                donations.append((index+1, donor.get("user_id"), format_from_k(donor.get("amount"))))
+                donations.append((index + 1, donor.get("user_id"), format_from_k(donor.get("amount"))))
             return donations
         else:
             return None
