@@ -32,4 +32,5 @@ Project Started - 9th April 2020
 	- Add CrystalMathLabs API Usage
 	- Command to check vanity roles and add them (staff only usage)
 	- Cloud based settings file modification commands
+	- Nitro Boosters Enter All giveaways
 
