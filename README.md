@@ -25,4 +25,11 @@ Project Started - 9th April 2020
   **Major Changes**
   
   	- Changed Database Library from psycopg2 to asyncpg
+	
+  **To Be Added**
+  
+  	- Rest of v3.x to be rewritten
+	- Add CrystalMathLabs API Usage
+	- Command to check vanity roles and add them
+	- Cloud based settings file modification commands
 
