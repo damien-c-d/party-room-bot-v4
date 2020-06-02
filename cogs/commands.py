@@ -3,7 +3,7 @@ from discord.ext import commands
 
 from models.db_ops import DBOperation
 from models.utils import valid_donation_channels, in_channels, format_to_k, format_from_k, roles, mention_role, \
-    create_embed, create_author_embed, check_donation_roles
+    create_embed, create_author_embed, check_donation_roles, high_rank_channels
 
 
 class Commands(commands.Cog):
@@ -11,9 +11,7 @@ class Commands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    #   Donation Commands
-    #
-    #
+    # region Donation Commands
 
     reasons = {"1": "Recruitment Drop",
                "2": "Wall Of Fame Drop",
@@ -176,6 +174,26 @@ class Commands(commands.Cog):
         finally:
             await db.close()
             await ctx.message.delete()
+
+    # endregion Donation Commands
+
+    # region Blacklist Commands
+
+    @in_channels(high_rank_channels)
+    @commands.guild_only()
+    @commands.has_any_role(roles["founder"], roles["administrator"], roles["head_moderator"])
+    async def g_blacklist_(self, ctx, member: discord.Member):
+
+    @in_channels(high_rank_channels)
+    @commands.guild_only()
+    @commands.has_any_role(roles["founder"], roles["administrator"], roles["head_moderator"])
+    async def unblacklist_(self, ctx, member: discord.Member):
+
+    @in_channels(high_rank_channels)
+    @commands.guild_only()
+    @commands.has_any_role(roles["founder"], roles["administrator"], roles["head_moderator"])
+    async def blacklist_(self, ctx, member: discord.Member):
+    # endregion Blacklist Commands
 
 
 def setup(bot):

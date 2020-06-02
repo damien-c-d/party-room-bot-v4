@@ -27,6 +27,8 @@ valid_giveaway_roles = [roles["none"], roles["level_10"], roles["level_20"], rol
 
 valid_donation_channels = [channels["community_chest"], channels["staff_bot_room"], channels["important_bot_stuff"]]
 
+high_rank_channels = [channels["high_rank_room"], channels["important_bot_stuff"], channels["head_mod_room"]]
+
 to_seconds = {
     "s": 1,
     "m": 60,
