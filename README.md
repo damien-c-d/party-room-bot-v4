@@ -30,6 +30,6 @@ Project Started - 9th April 2020
   
   	- Rest of v3.x to be rewritten
 	- Add CrystalMathLabs API Usage
-	- Command to check vanity roles and add them
+	- Command to check vanity roles and add them (staff only usage)
 	- Cloud based settings file modification commands
 
