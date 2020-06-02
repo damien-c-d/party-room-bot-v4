@@ -67,6 +67,9 @@ class DBOperation:
         else:
             raise WinnerPoolNotFoundException(giveaway_id)
 
+    async def update_winner_pool(self, giveaway_id, pool):
+        await self.con.execute("""UPDATE winner_pool SET pool=$1 WHERE giveaway=$2""", pool, giveaway_id)
+
     async def get_blacklist(self):
         x = await self.con.fetch("""
         SELECT * FROM blacklist

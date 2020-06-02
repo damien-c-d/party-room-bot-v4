@@ -93,6 +93,29 @@ class Giveaways(commands.Cog):
             await db.close()
             await ctx.message.delete()
 
+    @in_giveaway_channel()
+    @commands.guild_only()
+    @commands.has_any_role(roles["host"], roles["head_moderator"], roles["administrator"], roles["founder"],
+                           roles["bot_goat"])
+    @commands.command(name="greroll", aliases=["giveawayreroll", "rerollgiveaway"])
+    async def greroll_(self, ctx, giveaway_id, *, members=None):
+        if members is None:
+            return await ctx.send("No users mentioned to reroll!")
+        members = members.split(" ")
+        db = await DBOperation.new()
+        try:
+            ga = await db.get_giveaway(giveaway_id)
+            if ga is not None:
+                giveaway = await Giveaway.get_existing(ctx.guild, ga)
+                giveaway.winner_amt = members.length
+                await self.end_giveaway(giveaway, True)
+
+
+
+        finally:
+            await db.close()
+            await ctx.message.delete()
+
     @tasks.loop(seconds=20)
     async def giveaway_handler(self):
         if not self.giveaways:
@@ -170,29 +193,36 @@ class Giveaways(commands.Cog):
                         else:
                             await add_user_to_pool(giveaway, payload.user_id)
 
-    async def end_giveaway(self, giveaway):
+    async def end_giveaway(self, giveaway, rerolling=False):
         winners = await choose_giveaway_winners(giveaway.message.id, giveaway.winner_amt)
         if not winners or winners is None:
-            final_embed = await update_embed_field(giveaway.embed, 2,
-                                                   "Giveaway has ended. Could not determine a "
-                                                   "winner",
-                                                   discord.Embed.Empty)
-            await giveaway.message.edit(embed=final_embed)
+            if not rerolling:
+                final_embed = await update_embed_field(giveaway.embed, 2,
+                                                       "Giveaway has ended. Could not determine a "
+                                                       "winner",
+                                                       discord.Embed.Empty)
+                await giveaway.message.edit(embed=final_embed)
+            else:
+                return await giveaway.channel.send("Failed to reroll giveaway, no winners chosen.")
         else:
             winner_str = ""
+            giveaway.active = False
             for index, winner in enumerate(winners):
                 winner = giveaway.guild.get_member(winner)
                 winner_str += f"> {index + 1}. {winner.mention}\n"
-            final_embed = await update_embed_field(giveaway.embed, 2,
-                                                   "Giveaway has ended! Winners were:",
-                                                   winner_str)
-            await giveaway.message.edit(embed=final_embed)
-            await giveaway.channel.send(
-                f"{giveaway.author.display_name}'s {giveaway.prize} "
-                f"giveaway has ended! The winners were:\n" + winner_str)
-        giveaway.active = False
-        await giveaway.remove_giveaway()
-        self.giveaways.remove(giveaway)
+            if not rerolling:
+                final_embed = await update_embed_field(giveaway.embed, 2,
+                                                       "Giveaway has ended! Winners were:",
+                                                       winner_str)
+                await giveaway.message.edit(embed=final_embed)
+                await giveaway.channel.send(
+                    f"{giveaway.author.display_name}'s {giveaway.prize} "
+                    f"giveaway has ended! The winners were:\n" + winner_str)
+                self.giveaways.remove(giveaway)
+            else:
+                await giveaway.channel.send(f"New winners are:\n"
+                                            f"{winner_str}")
+        # await giveaway.remove_giveaway()
 
 
 def setup(bot):

@@ -167,6 +167,7 @@ async def choose_giveaway_winners(giveaway_id, winners):
             else:
                 pool.remove(choice)
                 continue
+        await db.update_winner_pool(giveaway_id, pool)
         return final_winners
     finally:
         await db.close()
