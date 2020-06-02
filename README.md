@@ -33,4 +33,5 @@ Project Started - 9th April 2020
 	- Command to check vanity roles and add them (staff only usage)
 	- Cloud based settings file modification commands
 	- Nitro Boosters Enter All giveaways
+	- Auto assign roles based on join date (for steph): https://discordapp.com/channels/498848816976363531/635330099721273346/652400180565639179
 
