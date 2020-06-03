@@ -3,7 +3,7 @@ from discord.ext import commands
 
 from models.db_ops import DBOperation
 from models.utils import valid_donation_channels, in_channels, format_to_k, format_from_k, roles, mention_role, \
-    create_embed, create_author_embed, check_donation_roles, high_rank_channels
+    create_embed, create_author_embed, check_donation_roles, high_rank_channels, check_blacklist
 
 
 class Commands(commands.Cog):
@@ -183,16 +183,52 @@ class Commands(commands.Cog):
     @commands.guild_only()
     @commands.has_any_role(roles["founder"], roles["administrator"], roles["head_moderator"])
     async def g_blacklist_(self, ctx, member: discord.Member):
+        db = await DBOperation.new()
+        try:
+            if await check_blacklist(member.id):
+                await ctx.send(f"{member.display_name} is already blacklisted.")
+            else:
+                if await check_blacklist(member.id, False):
+                    await db.set_blacklist_active(member.id)
+                    await ctx.send(f"{member.display_name}s blacklisting is now active.")
+                else:
+                    await db.add_to_blacklist(member.id)
+                    await ctx.send(f"{member.display_name} has been blacklisted for giveaways")
+        finally:
+            await db.close()
+            await ctx.message.delete()
 
     @in_channels(high_rank_channels)
     @commands.guild_only()
     @commands.has_any_role(roles["founder"], roles["administrator"], roles["head_moderator"])
     async def unblacklist_(self, ctx, member: discord.Member):
+        db = await DBOperation.new()
+        try:
+            await db.delete_from_blacklist(member.id)
+            await ctx.send(f"{member.display_name} was deleted from the blacklist.")
+        finally:
+            await db.close()
+            await ctx.message.delete()
 
     @in_channels(high_rank_channels)
     @commands.guild_only()
     @commands.has_any_role(roles["founder"], roles["administrator"], roles["head_moderator"])
     async def blacklist_(self, ctx, member: discord.Member):
+        db = await DBOperation.new()
+        try:
+            blacklist_string = ""
+            blacklist = await db.get_blacklist()
+            for index, record in enumerate(blacklist):
+                user = self.bot.get_user(record.get("user_id"))
+                if user is not None:
+                    blacklist_string += f"{index+1}. {user.display_name} - Active: {str(record.get('status'))}\n"
+                else:
+                    blacklist_string += f"{index + 1}. deleted-user - Active: {str(record.get('status'))}\n"
+            await ctx.send(blacklist_string)
+        finally:
+            await db.close()
+            await ctx.message.delete()
+
     # endregion Blacklist Commands
 
 

@@ -125,16 +125,22 @@ async def add_reactions(message: discord.Message, emojis):
         await message.add_reaction(emoji=emoji)
 
 
-async def check_blacklist(user):
+async def check_blacklist(user, active=True):
     db = await DBOperation.new()
     try:
-        if user not in await db.get_active_blacklists():
-            await db.close()
-            return False
+        if active:
+            if user in await db.get_active_blacklists():
+                return True
+            else:
+                return False
         else:
-            return True
+            if user in await db.get_inactive_blacklists():
+                return True
+            else:
+                return False
     finally:
         await db.close()
+
 
 
 async def update_embed_field(embed, index, name, value):

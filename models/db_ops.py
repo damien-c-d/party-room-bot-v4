@@ -87,6 +87,14 @@ class DBOperation:
         else:
             return None
 
+    async def delete_from_blacklist(self, user_id):
+        await self.con.execute("""DELETE FROM blacklist WHERE user_id=$1""",
+                               user_id)
+
+    async def add_to_blacklist(self, user_id):
+        await self.con.execute("""INSERT INTO blacklist (user_id, status, date_listed) VALUES ($1, $2, $3)""",
+                               user_id, True, datetime.now())
+
     async def get_inactive_blacklists(self):
         x = await self.get_blacklist()
         inactive = [z for z in x if not z.get("status")]
