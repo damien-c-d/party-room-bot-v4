@@ -6,7 +6,7 @@ from discord.ext import commands
 from models.db_ops import DBOperation
 from models.utils import valid_donation_channels, in_channels, format_to_k, format_from_k, roles, mention_role, \
     create_embed, create_author_embed, check_donation_roles, high_rank_channels, check_blacklist, \
-    get_staff_lists_formatted, get_staff_lists, get_message_counts
+    get_staff_lists_formatted, get_staff_lists, get_message_counts, get_message_count
 
 
 class Commands(commands.Cog):
@@ -292,6 +292,19 @@ class Commands(commands.Cog):
                     counts = await get_message_counts(ctx.guild, x[1])
                     embed.add_field(name=x[0], value=" ".join(counts))
             await ctx.send(embed=embed)
+        finally:
+            await ctx.message.delete()
+
+    @commands.guild_only()
+    @commands.has_any_role(roles["administrator"], roles["founder"])
+    @commands.command(name="msghistory", aliases=["messagehistory", "msgcount", "messagecount"])
+    async def message_history(self, ctx, member: discord.Member, days: str):
+        try:
+            if not days.isdigit():
+                return await ctx.send("Days must be a number")
+            await ctx.send(f"{member.display_name} has sent "
+                           f"{await get_message_count(ctx.guild, member, int(days))} "
+                           f"in the past {days} days.")
         finally:
             await ctx.message.delete()
 

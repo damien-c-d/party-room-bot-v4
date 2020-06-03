@@ -9,6 +9,7 @@ from models.db_ops import DBOperation
 from models.exceptions import InvalidTimeException, InvalidWinnerAmount, InvalidRoleException, \
     WinnerPoolNotFoundException
 
+# region Public Vars
 cfg = Config()
 channels = cfg.channels
 roles = cfg.roles
@@ -38,6 +39,10 @@ to_seconds = {
     "n": -10
 }
 
+
+# endregion Public Vars
+
+# region Public Functions
 
 def in_channel(ch_id):
     """Function for channel check"""
@@ -110,9 +115,9 @@ async def check_message_count(giveaway, user):
         return False
 
 
-async def get_message_count(guild, member: discord.Member):
+async def get_message_count(guild, member: discord.Member, days=7):
     chs = [y for y in guild.channels if y.id not in invalid_message_channels and y.type == discord.ChannelType.text]
-    date = datetime.utcnow() - timedelta(days=7)
+    date = datetime.utcnow() - timedelta(days=days)
     count = 0
     for channel in chs:
         async for _ in await channel.history(limit=None, after=date).filter(lambda m: m.author.id == member.id):
@@ -122,11 +127,11 @@ async def get_message_count(guild, member: discord.Member):
     return count
 
 
-async def get_message_counts(guild, members):
+async def get_message_counts(guild, members, days=7):
     members = [x for x in members if isinstance(x, discord.Member)]
     chs = [y for y in guild.channels if y.id not in invalid_message_channels and y.type == discord.ChannelType.text]
     counts = []
-    date = datetime.utcnow() - timedelta(days=7)
+    date = datetime.utcnow() - timedelta(days=days)
     for member in members:
         count = 0
         for channel in chs:
@@ -134,7 +139,7 @@ async def get_message_counts(guild, members):
                 count += 1
                 if count >= msg_req:
                     break
-        counts.append(f"Msgs/7Days: {count}")
+        counts.append(f"Msgs/{days}Days: {count}")
     return list(zip(members, counts))
 
 
@@ -316,3 +321,5 @@ def check_donation_roles(guild, member, amount):
         await member.add_roles(hundred_m)
     if amount >= 250000 and twofifty_m not in member.roles:
         await member.add_roles(twofifty_m)
+
+# endregion Public Functions

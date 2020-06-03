@@ -159,9 +159,16 @@ class DBOperation:
         else:
             return None
 
-    async def get_all_donations(self, ctx):
+    async def get_all_donations(self):
         x = await self.con.fetch("""SELECT * FROM donations ORDER BY amount DESC""")
         if x is not None:
+            return x
+        else:
+            return None
+
+    async def get_mutes(self):
+        x = await self.con.fetch("""SELECT * FROM moderation WHERE muted=$1""", True)
+        if x and x is not None:
             return x
         else:
             return None
