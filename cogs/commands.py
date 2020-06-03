@@ -1,9 +1,12 @@
+from datetime import datetime
+
 import discord
 from discord.ext import commands
 
 from models.db_ops import DBOperation
 from models.utils import valid_donation_channels, in_channels, format_to_k, format_from_k, roles, mention_role, \
-    create_embed, create_author_embed, check_donation_roles, high_rank_channels, check_blacklist
+    create_embed, create_author_embed, check_donation_roles, high_rank_channels, check_blacklist, \
+    get_staff_lists_formatted, get_staff_lists, get_message_counts
 
 
 class Commands(commands.Cog):
@@ -182,6 +185,7 @@ class Commands(commands.Cog):
     @in_channels(high_rank_channels)
     @commands.guild_only()
     @commands.has_any_role(roles["founder"], roles["administrator"], roles["head_moderator"])
+    @commands.command(name="gblacklist", aliases=["blacklistadd", "addtoblacklist"])
     async def g_blacklist_(self, ctx, member: discord.Member):
         db = await DBOperation.new()
         try:
@@ -201,6 +205,7 @@ class Commands(commands.Cog):
     @in_channels(high_rank_channels)
     @commands.guild_only()
     @commands.has_any_role(roles["founder"], roles["administrator"], roles["head_moderator"])
+    @commands.command(name="unblacklist", aliases=["blacklistremove", "removefromblacklist"])
     async def unblacklist_(self, ctx, member: discord.Member):
         db = await DBOperation.new()
         try:
@@ -213,7 +218,8 @@ class Commands(commands.Cog):
     @in_channels(high_rank_channels)
     @commands.guild_only()
     @commands.has_any_role(roles["founder"], roles["administrator"], roles["head_moderator"])
-    async def blacklist_(self, ctx, member: discord.Member):
+    @commands.command(name="blacklist", aliases=["showblacklist", "blacklisted"])
+    async def blacklist_(self, ctx):
         db = await DBOperation.new()
         try:
             blacklist_string = ""
@@ -221,7 +227,7 @@ class Commands(commands.Cog):
             for index, record in enumerate(blacklist):
                 user = self.bot.get_user(record.get("user_id"))
                 if user is not None:
-                    blacklist_string += f"{index+1}. {user.display_name} - Active: {str(record.get('status'))}\n"
+                    blacklist_string += f"{index + 1}. {user.display_name} - Active: {str(record.get('status'))}\n"
                 else:
                     blacklist_string += f"{index + 1}. deleted-user - Active: {str(record.get('status'))}\n"
             await ctx.send(blacklist_string)
@@ -230,6 +236,66 @@ class Commands(commands.Cog):
             await ctx.message.delete()
 
     # endregion Blacklist Commands
+
+    # region Moderation Commands
+
+    @commands.guild_only()
+    @commands.has_any_role(roles["administrator"], roles["founder"], roles["moderator"])
+    @commands.command(name="woflist", aliases=["wof", "walloffame"])
+    async def wof_list_(self, ctx):
+        try:
+            role = ctx.guild.get_role(roles["wall_of_fame"])
+            if role is not None:
+                list_str = [f"{x.display_name} - Joined {(datetime.utcnow() - x.joined_at).days}" for x in role.members]
+                list_str.sort()
+                await ctx.send(embed=create_embed("Wall Of Fame List", " ".join(list_str), discord.Color.green()))
+        finally:
+            await ctx.message.delete()
+
+    @commands.guild_only()
+    @commands.has_any_role(roles["administrator"], roles["founder"], roles["moderator"])
+    @commands.command(name="checkrole", aliases=["rolecheck", "userswithrole"])
+    async def role_check_(self, ctx, role: discord.Role):
+        try:
+            users_with_role = [f"**{x.display_name}**\n" for x in role.members]
+            await ctx.send(embed=create_embed(f"{role.name} List", " ".join(users_with_role), discord.Color.blurple()))
+        finally:
+            await ctx.message.delete()
+
+    @commands.guild_only()
+    @commands.has_any_role(roles["administrator"], roles["founder"], roles["moderator"])
+    @commands.command(name="stafflist", aliases=["allstaff"])
+    async def staff_list_(self, ctx):
+        try:
+            staff_list = get_staff_lists_formatted(ctx.guild)
+            embed = create_embed("Staff & Helper List",
+                                 "A list of staff and helpers with their status at time of this message.",
+                                 discord.Color.red())
+            for x in staff_list:
+                if x[1]:
+                    embed.add_field(name=x[0], value=" ".join(x[1]))
+            await ctx.send(embed=embed)
+        finally:
+            await ctx.message.delete()
+
+    @commands.guild_only()
+    @commands.has_any_role(roles["administrator"], roles["founder"])
+    @commands.command(name="staffperformance", aliases=["staffperf", "perflist"])
+    async def staff_performance_(self, ctx):
+        try:
+            staff_list = get_staff_lists(ctx.guild)
+            embed = create_embed("Staff & Helper List",
+                                 "A list of staff and helpers with their status and msg count at time of this message.",
+                                 discord.Color.red())
+            for x in staff_list:
+                if x[1]:
+                    counts = await get_message_counts(ctx.guild, x[1])
+                    embed.add_field(name=x[0], value=" ".join(counts))
+            await ctx.send(embed=embed)
+        finally:
+            await ctx.message.delete()
+
+    # endregion Moderation Commands
 
 
 def setup(bot):

@@ -110,6 +110,34 @@ async def check_message_count(giveaway, user):
         return False
 
 
+async def get_message_count(guild, member: discord.Member):
+    chs = [y for y in guild.channels if y.id not in invalid_message_channels and y.type == discord.ChannelType.text]
+    date = datetime.utcnow() - timedelta(days=7)
+    count = 0
+    for channel in chs:
+        async for _ in await channel.history(limit=None, after=date).filter(lambda m: m.author.id == member.id):
+            count += 1
+            if count >= msg_req:
+                break
+    return count
+
+
+async def get_message_counts(guild, members):
+    members = [x for x in members if isinstance(x, discord.Member)]
+    chs = [y for y in guild.channels if y.id not in invalid_message_channels and y.type == discord.ChannelType.text]
+    counts = []
+    date = datetime.utcnow() - timedelta(days=7)
+    for member in members:
+        count = 0
+        for channel in chs:
+            async for _ in await channel.history(limit=None, after=date).filter(lambda m: m.author.id == member.id):
+                count += 1
+                if count >= msg_req:
+                    break
+        counts.append(f"Msgs/7Days: {count}")
+    return list(zip(members, counts))
+
+
 def get_giveaway_role(guild, role_id):
     x = discord.utils.get(guild.roles, id=role_id)
     if role_id not in valid_giveaway_roles:
@@ -140,7 +168,6 @@ async def check_blacklist(user, active=True):
                 return False
     finally:
         await db.close()
-
 
 
 async def update_embed_field(embed, index, name, value):
@@ -241,6 +268,29 @@ def create_author_embed(author, icon_url, color=discord.Color.red(), inline=Fals
         return embed
     except Exception:
         return None
+
+
+def get_staff_lists_formatted(guild):
+    one_nanas = ("1 Nana", [f"{x.display_name} - {x.status}" for x in (guild.get_role(roles["1nana"])).members])
+    two_nanas = ("2 Nana", [f"{x.display_name} - {x.status}" for x in (guild.get_role(roles["2nana"])).members])
+    three_nanas = ("3 Nana", [f"{x.display_name} - {x.status}" for x in (guild.get_role(roles["3nana"])).members])
+    cc_mods = ("CC Moderators",
+               [f"{x.display_name} - {x.status}" for x in (guild.get_role(roles["cc_moderator"])).members])
+    mods = ("Moderators", [f"{x.display_name} - {x.status}" for x in (guild.get_role(roles["moderator"])).members])
+    admins = ("Admins", [f"{x.display_name} - {x.status}" for x in (guild.get_role(roles["administrator"])).members])
+    founders = ("Founders", [f"{x.display_name} - {x.status}" for x in (guild.get_role(roles["founder"])).members])
+    return [one_nanas, two_nanas, three_nanas, cc_mods, mods, admins, founders]
+
+
+def get_staff_lists(guild):
+    one_nanas = [x for x in (guild.get_role(roles["1nana"])).members]
+    two_nanas = [x for x in (guild.get_role(roles["2nana"])).members]
+    three_nanas = [x for x in (guild.get_role(roles["3nana"])).members]
+    cc_mods = [x for x in (guild.get_role(roles["cc_moderator"])).members]
+    mods = [x for x in (guild.get_role(roles["moderator"])).members]
+    admins = [x for x in (guild.get_role(roles["administrator"])).members]
+    founders = [x for x in (guild.get_role(roles["founder"])).members]
+    return [one_nanas, two_nanas, three_nanas, cc_mods, mods, admins, founders]
 
 
 def check_donation_roles(guild, member, amount):
