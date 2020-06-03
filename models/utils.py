@@ -20,7 +20,7 @@ invalid_message_channels = [channels["goodbye"], channels["announcements"], chan
                             channels["staff_bot_room"], channels["bingo_announcements_rules"], channels["events"],
                             channels["guides_channel"], channels["games"], channels["bot_commands"]]
 can_end_with = ('w', 'd', 'h', 'm', 's', 'n')
-
+guild_id = cfg.data["guild_id"]
 valid_giveaway_channels = [channels["giveaways"], channels["staff_bot_room"], channels["important_bot_stuff"]]
 valid_giveaway_roles = [roles["none"], roles["level_10"], roles["level_20"], roles["level_30"], roles["level_40"],
                         roles["level_50"], roles["wall_of_fame"], roles["nitro_booster"], roles["bot_goat"],

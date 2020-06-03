@@ -6,13 +6,26 @@ from discord.ext import commands
 from models.db_ops import DBOperation
 from models.utils import valid_donation_channels, in_channels, format_to_k, format_from_k, roles, mention_role, \
     create_embed, create_author_embed, check_donation_roles, high_rank_channels, check_blacklist, \
-    get_staff_lists_formatted, get_staff_lists, get_message_counts, get_message_count
+    get_staff_lists_formatted, get_staff_lists, get_message_counts, get_message_count, channels
 
 
 class Commands(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+    # region User Commands
+    @commands.command(name="invitedby", aliases=["invited by"])
+    async def user_invited(self, ctx, *, inviter):
+        try:
+            staff_channel = ctx.guild.get_channel(channels["discord_staff_room"])
+            if isinstance(inviter, discord.Member):
+                inviter = inviter.mention
+            await staff_channel.send(f"{ctx.author.mention} has joined the server"
+                                     f" and was invited by {inviter}")
+        finally:
+            await ctx.message.delete()
+    # endregion User Commands
 
     # region Donation Commands
 
