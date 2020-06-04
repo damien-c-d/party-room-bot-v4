@@ -173,8 +173,18 @@ class DBOperation:
         else:
             return None
 
+    async def get_mute(self, user_id):
+        x = await self.con.fetchrow("""SELECT * FROM moderation WHERE user_id=$1""", user_id)
+        if x is None:
+            return None
+        else:
+            return x
+
     async def remove_mute(self, user_id):
         await self.con.execute("""UPDATE moderation SET muted=$1 WHERE user_id=$2""", False, user_id)
+
+    async def update_mute(self, user_id, end_date):
+        await self.con.execute("""UPDATE moderation SET muted=$1, mute_end=$2 WHERE user_id=$3""", True, end_date, user_id)
 
     async def close(self):
         await self.con.close()

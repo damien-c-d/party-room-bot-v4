@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import discord
 from discord.ext import commands
@@ -25,6 +25,7 @@ class Commands(commands.Cog):
                                      f" and was invited by {inviter}")
         finally:
             await ctx.message.delete()
+
     # endregion User Commands
 
     # region Donation Commands
@@ -320,6 +321,43 @@ class Commands(commands.Cog):
                            f"in the past {days} days.")
         finally:
             await ctx.message.delete()
+
+    @commands.guild_only()
+    @commands.has_any_role(roles["administrator"], roles["founder"], roles["moderator"])
+    @commands.command(name="mute", aliases=["shh", "shush", "quiet", "stfu", "silenceikillu"])
+    async def mute_(self, ctx, member: discord.Member, time: int = 60, *, reason="None"):
+        db = await DBOperation.new()
+        try:
+            end_date = datetime.now() + timedelta(minutes=time)
+            mute = await db.get_mute(member.id)
+            if mute is None:
+                await db.add_mute(member.id)
+            else:
+                await db.update_mute(member.id, end_date)
+            muted_role = ctx.guild.get_role(roles["muted"])
+            if muted_role not in member.roles:
+                await member.add_roles(muted_role, reason=reason)
+            await ctx.send(f"{member.display_name} has been shushed by {ctx.author.display_name} for {time} minutes")
+        finally:
+            await db.close()
+
+    @commands.guild_only()
+    @commands.has_any_role(roles["administrator"], roles["founder"], roles["moderator"])
+    @commands.command(name="unmute", aliases=["unshh", "unshush", "unquiet", "unstfu"])
+    async def unmute_(self, ctx, member: discord.Member):
+        muted_role = ctx.guild.get_role(roles["muted"])
+        db = await DBOperation.new()
+        try:
+            mute = await db.get_mute(member.id)
+            if mute is None:
+                return await ctx.send(f"{member.display_name} is not currently muted.")
+            else:
+                await db.remove_mute(member.id)
+                if muted_role in member.roles:
+                    await member.remove_roles(muted_role)
+                await ctx.send(f"{member.display_name} has been unmuted by {ctx.author.display_name}")
+        finally:
+            await db.close()
 
     # endregion Moderation Commands
 

@@ -28,6 +28,8 @@ class Tasks(commands.Cog):
                             pass
                         channel = guild.get_channel(channels["discord_staff_room"])
                         await channel.send(f"{member.mention}'s mute has ended.")
+                else:
+                    self.muted_users.remove(muted_user)
 
     @mute_timer.before_loop
     async def load_mutes(self):
