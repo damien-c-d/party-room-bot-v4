@@ -173,5 +173,8 @@ class DBOperation:
         else:
             return None
 
+    async def remove_mute(self, user_id):
+        await self.con.execute("""UPDATE moderation SET muted=$1 WHERE user_id=$2""", False, user_id)
+
     async def close(self):
         await self.con.close()

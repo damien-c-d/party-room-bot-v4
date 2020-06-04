@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands, tasks
 
 from models.db_ops import DBOperation
-from models.utils import guild_id, channels
+from models.utils import guild_id, channels, roles
 
 
 class Tasks(commands.Cog):
@@ -21,11 +21,11 @@ class Tasks(commands.Cog):
                 if muted_user.get("muted"):
                     member = guild.get_member(muted_user.get("user_id"))
                     if datetime.now() >= muted_user.get("mute_end"):
-                        await self.remove_mute(muted_user)
+                        await self.remove_mute(muted_user, guild)
                         try:
                             await member.send("Your mute has ended.")
                         except Exception as e:
-                            return
+                            pass
                         channel = guild.get_channel(channels["discord_staff_room"])
                         await channel.send(f"{member.mention}'s mute has ended.")
 
@@ -37,8 +37,17 @@ class Tasks(commands.Cog):
         finally:
             await db.close()
 
-    async def remove_mute(self, user):
+    async def remove_mute(self, user, guild):
         db = await DBOperation.new()
+        try:
+            await db.remove_mute(user.get("user_id"))
+            self.muted_users.remove(user)
+            muted_role = guild.get_role(roles["muted"])
+            member = guild.get_member(user.get("user_id"))
+            if muted_role is not None and member is not None and muted_role in member.roles:
+                await member.remove_roles(muted_role, reason="Mute ended")
+        finally:
+            await db.close()
 
 
 def setup(bot):
