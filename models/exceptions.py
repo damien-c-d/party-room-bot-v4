@@ -42,3 +42,13 @@ class BlackListEmptyException(Exception):
 class EmbedIsNoneException(Exception):
     def __init__(self, giveaway_id):
         self.message = f"Embed is None for giveaway with ID: {giveaway_id}"
+
+
+class GameOver(Exception):
+    def __init__(self, reason, name):
+        self.message = f"{name} Game Over! {reason}"
+
+
+class InvalidGameTypeException(Exception):
+    def __init__(self, game_type):
+        self.message = f"{game_type} is not a valid game type."

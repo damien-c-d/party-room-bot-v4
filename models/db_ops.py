@@ -5,7 +5,9 @@ from datetime import datetime
 import asyncpg
 
 from models.config import Config
-from models.exceptions import NoActiveGiveawaysException, WinnerPoolNotFoundException, BlackListEmptyException
+from models.enums import GameTypes
+from models.exceptions import NoActiveGiveawaysException, WinnerPoolNotFoundException, BlackListEmptyException, \
+    InvalidGameTypeException
 from models.utils import format_from_k
 
 data = Config().data
@@ -209,6 +211,22 @@ class DBOperation:
         x = await self.con.fetchrow("""SELECT * FROM bot_info""")
         if x is not None:
             return x.get("version")
+
+    async def get_game_score(self, user_id, game_type):
+        x = await self.con.fetchrow("""SELECT * FROM games WHERE user_id=$1""", user_id)
+        if x is not None:
+            if game_type == GameTypes.random:
+                return x.get("random")
+            elif game_type == GameTypes.trivia:
+                return x.get("trivia")
+            elif game_type == GameTypes.hangman:
+                return x.get("hangman")
+            elif game_type == GameTypes.unscramble:
+                return x.get("scrambled")
+            else:
+                raise InvalidGameTypeException(GameTypes.name(game_type))
+        else:
+            return None
 
     async def update_version(self, version):
         await self.con.execute("""UPDATE bot_info SET version=$1""", version)
