@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta
 
 import discord
@@ -340,6 +341,7 @@ class Commands(commands.Cog):
             await ctx.send(f"{member.display_name} has been shushed by {ctx.author.display_name} for {time} minutes")
         finally:
             await db.close()
+            await ctx.message.delete()
 
     @commands.guild_only()
     @commands.has_any_role(roles["administrator"], roles["founder"], roles["moderator"])
@@ -358,6 +360,101 @@ class Commands(commands.Cog):
                 await ctx.send(f"{member.display_name} has been unmuted by {ctx.author.display_name}")
         finally:
             await db.close()
+            await ctx.message.delete()
+
+    @commands.guild_only()
+    @commands.has_any_role(roles["administrator"], roles["founder"], roles["moderator"])
+    @commands.command(name="purge", aliases=["purge_messages", "purgemessages", "bulkdelete", "delete"])
+    async def purge_messages_(self, ctx, num, member: discord.Member = None):
+        try:
+            if member is None:
+                deleted = await ctx.channel.purge(limit=num+1, bulk=True)
+                return await ctx.send(f"Deleted {len(deleted)} messages.", delete_after=5)
+            else:
+                deleted = await ctx.channel.purge(limit=num+1, check=lambda m: m.author.id == member.id, bulk=True)
+                return await ctx.send(f"Deleted {len(deleted)} of {member.display_name}'s messages.")
+        except discord.Forbidden:
+            return await ctx.send("I am missing the MANAGE_MESSAGES permission for this channel.")
+        except discord.HTTPException:
+            return await ctx.send("Failed to purge all the messages.")
+        finally:
+            await ctx.message.delete()
+
+    @commands.guild_only()
+    @commands.has_any_role(roles["administrator"], roles["founder"])
+    @commands.command(name="clearreactions", aliases=["clearreacts"])
+    async def clear_reactions(self, ctx, message_id):
+        try:
+            message = await ctx.channel.history(limit=1).filter(lambda m: m.id == message_id).flatten()
+            if not message:
+                message = await ctx.channel.fetch_message(message_id)
+                if message is None:
+                    return await ctx.send("Could not find that message in this channel.", delete_after=10)
+                else:
+                    await message.clear_reactions()
+            else:
+                await message[0].clear_reactions()
+        finally:
+            await ctx.message.delete()
+
+    @commands.guild_only()
+    @commands.has_any_role(roles["administrator"], roles["founder"], roles["moderator"], roles["cc_moderator"])
+    @commands.command(name="todo")
+    async def to_do_(self, ctx, priority: int = 1, *, item: str = None):
+        db = await DBOperation.new()
+        try:
+            if item is None:
+                return await ctx.send("If you want Jim to do something, you should type said thing.")
+            if 0 < priority <= 3:
+                await db.add_todo_item(item, priority, ctx.author.display_name, ctx.author.id)
+                await ctx.send(f"Added {item} to Jim's to-do list.")
+            else:
+                return await ctx.send("Priority must be between 1 and 3:\n"
+                                      "1 = Low, 2 = Medium, 3 = High")
+        finally:
+            await db.close()
+            await ctx.message.delete()
+
+    @commands.guild_only()
+    @commands.has_any_role(roles["administrator"], roles["founder"])
+    @commands.command(name="todolist")
+    async def to_do_list(self, ctx):
+        priorities = {"3": "High", "2": "Medium", "1": "Low"}
+        db = await DBOperation.new()
+        try:
+            items = await db.select_all_todo()
+            embed = create_embed("To-Do List", color=discord.Color.red())
+            if items and items is not None:
+                for index, record in enumerate(items):
+                    embed.add_field(name=f"{index+1}. {record.get('todo_id')} "
+                                         f"- Priority: {priorities[record.get('priority_num')]}",
+                                    value=f"{record.get('item')}\n"
+                                          f"Added by {record.get('author_name')} "
+                                          f"{(datetime.now() - record.get('datetime_added')).days} days ago.")
+                await ctx.send(embed=embed)
+            else:
+                await ctx.send("To-Do List is Empty!")
+        finally:
+            await db.close()
+            await ctx.message.delete()
+
+    @commands.guild_only()
+    @commands.has_any_role(roles["administrator"], roles["founder"])
+    @commands.command(name="tododone")
+    async def to_do_done(self, ctx, todo_id: uuid.UUID):
+        db = await DBOperation.new()
+        try:
+            todo = await db.get_todo(todo_id)
+            if todo_id is None:
+                return await ctx.send("Could not find that item on the list.")
+            else:
+                await db.remove_todo(todo_id)
+                await ctx.send(f"<@{todo.get('author_id')}> the item you added: {todo.get('item')} has been completed"
+                               f" and removed from the to-do list.")
+        finally:
+            await db.close()
+            await ctx.message.delete()
+
 
     # endregion Moderation Commands
 

@@ -1,4 +1,5 @@
 import ssl
+import uuid
 from datetime import datetime
 
 import asyncpg
@@ -185,6 +186,32 @@ class DBOperation:
 
     async def update_mute(self, user_id, end_date):
         await self.con.execute("""UPDATE moderation SET muted=$1, mute_end=$2 WHERE user_id=$3""", True, end_date, user_id)
+
+    async def add_todo_item(self, item: str, priority: int, name: str, author_id: str):
+        await self.con.execute("""INSERT INTO todo (author_id, author_name, item, datetime_added, priority_num, todo_id)
+        VALUES ($1, $2, $3, $4, $5, $6)""",
+                               author_id, name, item, datetime.now(), priority, uuid.uuid4())
+
+    async def select_all_todo(self):
+        x = await self.con.fetch("""SELECT * FROM todo ORDER BY priority_num DESC, datetime_added ASC""")
+        if x and x is not None:
+            return x
+        else:
+            return None
+
+    async def remove_todo(self, todo_id):
+        await self.con.execute("""DELETE from todo WHERE todo_id=$1""", todo_id)
+
+    async def get_todo(self, todo_id):
+        return await self.con.fetchrow("""SELECT * FROM todo WHERE todo_id=$1""", todo_id)
+
+    async def get_version(self):
+        x = await self.con.fetchrow("""SELECT * FROM bot_info""")
+        if x is not None:
+            return x.get("version")
+
+    async def update_version(self, version):
+        await self.con.execute("""UPDATE bot_info SET version=$1""", version)
 
     async def close(self):
         await self.con.close()
