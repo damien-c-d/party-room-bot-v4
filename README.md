@@ -10,17 +10,24 @@ Project Started - 9th April 2020
 
   **Cogs (each cog is used as a separate module for the bot)**
   
-  	- Commands
-	- Giveaways
+  	- Commands *rewritten* *partially complete*
+	- Giveaways *rewritten* *complete*
+	- Events(programming events not osrs based events) *new*
+	- Tasks *new*
+	- Games *rewritten* *partially complete*
       
   **Models (private classes and objects containing code the bot can access)**
   
   	- Bot (Custom bot model, overriding discord.commands.Bot) *new*
 	- Config (model for json config file stored in the cloud allows for changes to bot without rebuilding an update) *new*
 	- DBOperations (model for handling the database connections) *new*
+	- Enums (Model containing Enumeration Classes for various parts of the bot)
 	- Exceptions (Model containing custom exception classes for better error handling) *new*
-	- Giveaway (Reworked Giveaway Model for performance and cleaner code) *modified*
+	- Game (Model which all game objects inherit from. Contains several methods and variables) *new*
+	- Giveaway (Reworked Giveaway Model for performance and cleaner code.) *rewritten*
+	- RandomGame (Model for the Random Number Game) *new*
 	- Utils (File containing several utility functions required by the bot) *new*
+	
       
   **Major Changes**
   
