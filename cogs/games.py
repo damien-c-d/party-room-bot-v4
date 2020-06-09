@@ -22,20 +22,19 @@ class Games(commands.Cog):
                 db = await DBOperation.new()
                 try:
                     if self.random_game.guess(int(message.content)):
+                        self.random_game.winner = message.author
                         self.random_game.active = False
                         x = await db.get_game_score(message.author.id, GameTypes.random)
                         if x is not None:
                             await db.update_game_score(x + self.random_game.prize_points)
-                            await message.channel.send(create_embed(f"{self.random_game.name} Game Over",
-                                                                    f"{message.author.display_name}"
-                                                                    f" got the correct answer of: "
-                                                                    f"{self.random_game.num}",
-                                                                    discord.Color.red(),
-                                                                    [f"{message.author.display_name}'s Random Score:",
-                                                                     x + self.random_game.prize_points]))
-                            self.random_game = None
+                            await message.channel.send(self.random_game.get_win_embed())
+                            #self.random_game = None
+                    else:
+                        self.random_game.add_incorrect_guess(int(message.content))
+                        await message.ch
+
                 except GameOver as game_over:
-                    self.random_game = None
+                    #self.random_game = None
                     return await message.channel.send(game_over.message)
                 finally:
                     await db.close()

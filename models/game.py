@@ -2,6 +2,7 @@ import json
 from random import random
 
 
+
 class Game(object):
 
     def __init__(self, word_num, trivia):
@@ -23,6 +24,9 @@ class Game(object):
             with open("./res/trivia.json", 'r') as t:
                 self.trivia_questions = json.load(t)
         self.active = False
+        self.winner = None
+        self.embed = None
+        self.game_message = None
 
     def shuffle_words(self):
         return random.shuffle(self.words)
@@ -35,3 +39,4 @@ class Game(object):
         for _ in range(4):
             random.shuffle(self.words)
         return random.choice(self.words)
+

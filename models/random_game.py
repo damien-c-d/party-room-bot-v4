@@ -1,7 +1,10 @@
 from random import random
 
+import discord
+
 from models.exceptions import GameOver
 from models.game import Game
+from models.utils import create_embed, create_author_embed
 
 
 class RandomGame(Game):
@@ -14,6 +17,7 @@ class RandomGame(Game):
         self.num = random.randint(1, up_to)
         self.prize_points = up_to / 10
         self.name = "Random Number"
+        self.incorrect_guesses = []
 
     def guess(self, number):
         self.guesses -= 1
@@ -25,4 +29,20 @@ class RandomGame(Game):
             else:
                 return False
 
+    def random_embed(self):
+        embed = create_author_embed("Random Number Game",
+                                    "https://cdn.pixabay.com/photo/2014/04/03/10/11/question-mark-310100_960_720.png",
+                                    discord.Color.blue(),
+                                    False)
+        embed.description = f"Guess a number between 1 and {self.up_to}"
+        self.embed = embed
+        return self.embed
 
+    def add_incorrect_guess(self, x):
+        self.incorrect_guesses.append(x)
+        lower_or_higher = "Try something lower..." if self.num < x else "Try something higher..."
+        if self.embed.fields == discord.Embed.Empty:
+            self.embed.insert_field_at(0, name=f"Incorrect Guesses - {lower_or_higher}",
+                                       value=" ".join(self.incorrect_guesses))
+        else:
+            self.embed.set_field_at(0, value=" ".join(x))
