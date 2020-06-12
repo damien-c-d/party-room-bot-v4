@@ -18,6 +18,7 @@ class RandomGame(Game):
         self.prize_points = up_to / 10
         self.name = "Random Number"
         self.incorrect_guesses = []
+        self.last_message = None
 
     def guess(self, number):
         self.guesses -= 1
@@ -25,7 +26,7 @@ class RandomGame(Game):
             return True
         else:
             if self.guesses <= 0:
-                raise GameOver("You ran out of guesses!", self.name)
+                raise GameOver("You ran out of guesses!", self.name, self.num)
             else:
                 return False
 
@@ -44,5 +45,11 @@ class RandomGame(Game):
         if self.embed.fields == discord.Embed.Empty:
             self.embed.insert_field_at(0, name=f"Incorrect Guesses - {lower_or_higher}",
                                        value=" ".join(self.incorrect_guesses))
+            self.embed.insert_field_at(1, name="Guesses Remaining:", value=str(self.guesses))
         else:
             self.embed.set_field_at(0, value=" ".join(x))
+            self.embed.set_field_at(1, value=str(self.guesses))
+
+    def game_over(self, message, reason, answer):
+        self.embed.insert_field_at(2, name=message, value=f"{reason}\n\n"
+                                                          f"The correct answer was: {answer}")

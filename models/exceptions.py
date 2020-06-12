@@ -45,8 +45,10 @@ class EmbedIsNoneException(Exception):
 
 
 class GameOver(Exception):
-    def __init__(self, reason, name):
-        self.message = f"{name} Game Over! {reason}"
+    def __init__(self, reason, name, correct_answer):
+        self.message = f"{name} Game Over!"
+        self.reason = reason
+        self.correct_answer = correct_answer
 
 
 class InvalidGameTypeException(Exception):
