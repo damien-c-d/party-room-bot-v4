@@ -10,8 +10,7 @@ from models.utils import create_embed, create_author_embed
 class RandomGame(Game):
 
     def __init__(self, up_to):
-        word_num = random.randint(0, 4)
-        super().__init__(word_num, trivia=False)
+        super().__init__(word_num=None, trivia=False)
         self.up_to = up_to
         self.guesses = 6
         self.num = random.randint(1, up_to)

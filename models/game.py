@@ -2,11 +2,10 @@ import json
 from random import random
 
 
-
 class Game(object):
 
     def __init__(self, word_num, trivia):
-        if not trivia:
+        if not trivia and word_num is not None:
             with open("./res/words.json", 'r') as f:
                 words = json.load(f)
                 if word_num == 0:
@@ -39,4 +38,3 @@ class Game(object):
         for _ in range(4):
             random.shuffle(self.words)
         return random.choice(self.words)
-

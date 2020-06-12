@@ -26,6 +26,7 @@ Project Started - 9th April 2020
 	- Game (Model which all game objects inherit from. Contains several methods and variables) *new*
 	- Giveaway (Reworked Giveaway Model for performance and cleaner code.) *rewritten*
 	- RandomGame (Model for the Random Number Game) *new*
+	- Hangman (Model for the hangman game) *new*
 	- Utils (File containing several utility functions required by the bot) *new*
 	
       

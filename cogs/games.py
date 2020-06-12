@@ -1,11 +1,10 @@
-import discord
 from discord.ext import commands
 
 from models.db_ops import DBOperation
 from models.enums import GameTypes
 from models.exceptions import GameOver
 from models.random_game import RandomGame
-from models.utils import channels, create_embed
+from models.utils import channels
 
 
 class Games(commands.Cog):
@@ -27,6 +26,16 @@ class Games(commands.Cog):
                 return await ctx.send("The number specified must be at least 10.")
             self.random_game = RandomGame(upto)
             await ctx.send(embed=self.random_game.random_embed())
+
+    @commands.guild_only()
+    @commands.command(name="skiprandom")
+    async def skip_random_game(self, ctx):
+        if self.random_game is not None:
+            await self.random_game.last_message.delete()
+            self.random_game.active = False
+            self.random_game = None
+        else:
+            await ctx.send("There is no random number game currently active.")
 
     # endregion Games Commands
 
