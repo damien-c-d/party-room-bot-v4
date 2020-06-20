@@ -3,6 +3,7 @@ from discord.ext import commands
 from models.db_ops import DBOperation
 from models.enums import GameTypes
 from models.exceptions import GameOver
+from models.hangman import Hangman
 from models.random_game import RandomGame
 from models.utils import channels
 
@@ -12,6 +13,7 @@ class Games(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.random_game = None
+        self.hangman_game = None
 
     # region Games Commands
 
@@ -26,6 +28,16 @@ class Games(commands.Cog):
                 return await ctx.send("The number specified must be at least 10.")
             self.random_game = RandomGame(upto)
             await ctx.send(embed=self.random_game.random_embed())
+
+    @commands.guild_only()
+    @commands.command(name="hangman")
+    async def hangman_game_command(self, ctx):
+        if self.hangman_game is not None:
+            if self.hangman_game.active:
+                return await ctx.send("There is already a game of hangman in progress!")
+        else:
+            self.hangman_game = Hangman()
+            await ctx.send(embed=self.hangman_game.hangman_embed())
 
     @commands.guild_only()
     @commands.command(name="skiprandom")
