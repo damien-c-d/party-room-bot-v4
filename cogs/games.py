@@ -1,3 +1,5 @@
+from difflib import SequenceMatcher
+
 from discord.ext import commands
 
 from models.db_ops import DBOperation
@@ -40,6 +42,42 @@ class Games(commands.Cog):
             await ctx.send(embed=self.hangman_game.hangman_embed())
 
     @commands.guild_only()
+    @commands.command(name="guess")
+    async def guess_(self, ctx, *, guess):
+        if self.hangman_game is not None:
+            if self.hangman_game.active:
+                guess = guess.lower()
+                db = await DBOperation.new()
+                try:
+                    if SequenceMatcher(a=self.hangman_game.hang_word.lower(),
+                                       b=guess()).ratio() > 0.90:
+                        self.hangman_game.active = False
+                        x = await db.get_game_score(ctx.author.id, GameTypes.hangman)
+                        if x is not None:
+                            await db.update_game_score(ctx.author.id, x + self.hangman_game.guesses, GameTypes.hangman)
+                        else:
+                            await db.add_new_game_score(ctx.author.id, self.hangman_game.guesses, GameTypes.hangman)
+                        raise GameOver(f"{ctx.author.display_name} guessed the word!",
+                                       self.hangman_game.name,
+                                       self.hangman_game.hang_word)
+                    elif guess in self.hangman_game.solved:
+                        for index, letter in enumerate(self.hangman_game.solved):
+                            if letter.lower() == guess:
+                                self.hangman_game.blank[index + index] = guess
+                        blanks = str("".join(self.hangman_game.blank))
+                        self.hangman_game.add_letter()
+                        await ctx.send(embed=self.hangman_game.hangman_embed)
+                    else:
+                        self.hangman_game.add_wrong_guess()
+                except GameOver as game_over:
+                    self.hangman_game.game_over()
+                    await ctx.send(embed=self.hangman_game.hangman_embed)
+
+                finally:
+                    await db.close()
+                    await ctx.message.delete()
+
+    @commands.guild_only()
     @commands.command(name="skiprandom")
     async def skip_random_game(self, ctx):
         if self.random_game is not None:
@@ -65,10 +103,15 @@ class Games(commands.Cog):
                         self.random_game.active = False
                         x = await db.get_game_score(message.author.id, GameTypes.random)
                         if x is not None:
-                            await db.update_game_score(x + self.random_game.prize_points)
-                            raise GameOver(f"{message.author.display_name} got the correct answer!",
-                                           self.random_game.name, self.random_game.num)
-
+                            await db.update_game_score(message.author.id,
+                                                       x + self.random_game.prize_points,
+                                                       GameTypes.random)
+                        else:
+                            await db.add_new_game_score(message.author.id,
+                                                        self.random_game.prize_points,
+                                                        GameTypes.random)
+                        raise GameOver(f"{message.author.display_name} got the correct answer!",
+                                       self.random_game.name, self.random_game.num)
                     else:
                         self.random_game.add_incorrect_guess(int(message.content))
                         self.random_game.last_message = await message.channel.send(embed=self.random_game.embed)

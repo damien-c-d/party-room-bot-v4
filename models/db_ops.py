@@ -213,20 +213,26 @@ class DBOperation:
             return x.get("version")
 
     async def get_game_score(self, user_id, game_type):
-        x = await self.con.fetchrow("""SELECT * FROM games WHERE user_id=$1""", user_id)
-        if x is not None:
-            if game_type == GameTypes.random:
-                return x.get("random")
-            elif game_type == GameTypes.trivia:
-                return x.get("trivia")
-            elif game_type == GameTypes.hangman:
-                return x.get("hangman")
-            elif game_type == GameTypes.unscramble:
-                return x.get("scrambled")
+        try:
+            x = await self.con.fetchrow("""SELECT * FROM games WHERE user_id=$1""", user_id)
+            if x is not None:
+                if game_type is not None:
+                    return x.get(GameTypes.get_type_name(game_type))
             else:
-                raise InvalidGameTypeException(GameTypes.name(game_type))
-        else:
-            return None
+                return None
+        except InvalidGameTypeException as e:
+            print(e.message)
+            await self.close()
+
+    async def update_game_score(self, user_id, new_points, game_type):
+        try:
+            col_name = GameTypes.get_type_name(game_type)
+            if col_name is not None:
+                await self.con.execute("""UPDATE games SET $1=$2 WHERE user_id=$3""",
+                                       col_name, new_points, user_id)
+        except InvalidGameTypeException as e:
+            print(e.message)
+            await self.close()
 
     async def update_version(self, version):
         await self.con.execute("""UPDATE bot_info SET version=$1""", version)

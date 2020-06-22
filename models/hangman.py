@@ -13,7 +13,7 @@ class Hangman(Game):
         self.wrong = []
         self.blank = []
         self.embed = None
-
+        self.name = "Hangman!"
         self.hang_word = self.get_word()
 
     def get_word(self):
