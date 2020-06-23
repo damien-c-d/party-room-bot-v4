@@ -187,7 +187,8 @@ class DBOperation:
         await self.con.execute("""UPDATE moderation SET muted=$1 WHERE user_id=$2""", False, user_id)
 
     async def update_mute(self, user_id, end_date):
-        await self.con.execute("""UPDATE moderation SET muted=$1, mute_end=$2 WHERE user_id=$3""", True, end_date, user_id)
+        await self.con.execute("""UPDATE moderation SET muted=$1, mute_end=$2 WHERE user_id=$3""", True, end_date,
+                               user_id)
 
     async def add_todo_item(self, item: str, priority: int, name: str, author_id: str):
         await self.con.execute("""INSERT INTO todo (author_id, author_name, item, datetime_added, priority_num, todo_id)
@@ -233,6 +234,22 @@ class DBOperation:
         except InvalidGameTypeException as e:
             print(e.message)
             await self.close()
+
+    async def add_new_game_score(self, user_id, game_type, score):
+        column = GameTypes.get_type_name(game_type)
+        random, hangman, trivia, scrambled = 0, 0, 0, 0
+        if game_type == GameTypes.random:
+            random = score
+        elif game_type == GameTypes.hangman:
+            hangman = score
+        elif game_type == GameTypes.unscramble:
+            scrambled = score
+        elif game_type == GameTypes.trivia:
+            trivia = score
+        else:
+            raise InvalidGameTypeException(game_type)
+        await self.con.execute("""INSERT INTO games (user_id, scrambled, hangman, random, trivia) 
+        VALUES ($1, $2, $3, $4, $5)""", user_id, scrambled, hangman, random, trivia)
 
     async def update_version(self, version):
         await self.con.execute("""UPDATE bot_info SET version=$1""", version)
