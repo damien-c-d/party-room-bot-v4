@@ -18,7 +18,7 @@ class Games(commands.Cog):
         self.hangman_game = None
 
     # region Games Commands
-
+    # region Start Games
     @commands.guild_only()
     @commands.command(name="random", aliases=["startrandom", "randomgame", "prandom"])
     async def random_game_command(self, ctx, upto: int = 10):
@@ -41,6 +41,9 @@ class Games(commands.Cog):
             self.hangman_game = Hangman()
             await ctx.send(embed=self.hangman_game.hangman_embed())
 
+    # endregion Start Games
+
+    # region Game Guessing/Attempts
     @commands.guild_only()
     @commands.command(name="guess")
     async def guess_(self, ctx, *, guess):
@@ -77,6 +80,9 @@ class Games(commands.Cog):
                     await db.close()
                     await ctx.message.delete()
 
+    # endregion Game Guessing/Attempts
+
+    # region Skip Games
     @commands.guild_only()
     @commands.command(name="skiprandom")
     async def skip_random_game(self, ctx):
@@ -87,8 +93,20 @@ class Games(commands.Cog):
         else:
             await ctx.send("There is no random number game currently active.")
 
+    @commands.guild_only()
+    @commands.command(name="skiphangman")
+    async def skip_hangman_game(self, ctx):
+        if self.hangman_game is not None:
+            await self.hangman_game.last_message.delete()
+            self.hangman_game.active = False
+            self.hangman_game = None
+        else:
+            await ctx.send("There is no hangman game currently active.")
+
+    # endregion Skip Games
     # endregion Games Commands
 
+    # region Game Event Handlers
     @commands.Cog.listener(name="on_message")
     async def games_message_handler(self, message):
 
@@ -122,6 +140,7 @@ class Games(commands.Cog):
                 finally:
                     self.random_game = None
                     await db.close()
+    # endregion Game Event Handlers
 
 
 def setup(bot):

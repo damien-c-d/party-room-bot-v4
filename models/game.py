@@ -22,6 +22,7 @@ class Game(object):
         elif trivia:
             with open("./res/trivia.json", 'r') as t:
                 self.trivia_questions = json.load(t)
+        self.trivia = trivia
         self.active = False
         self.winner = None
         self.embed = None
@@ -34,7 +35,13 @@ class Game(object):
         self.active = True
 
     def choose_word(self):
-        self.words.sort()
-        for _ in range(4):
-            random.shuffle(self.words)
-        return random.choice(self.words)
+        if self.trivia:
+            self.trivia_questions.sort()
+            for _ in range(4):
+                random.shuffle(self.trivia_questions)
+            return random.choice(self.trivia_questions)
+        else:
+            self.words.sort()
+            for _ in range(4):
+                random.shuffle(self.words)
+            return random.choice(self.words)
