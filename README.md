@@ -27,6 +27,8 @@ Project Started - 9th April 2020
 	- Giveaway (Reworked Giveaway Model for performance and cleaner code.) *rewritten*
 	- RandomGame (Model for the Random Number Game) *new*
 	- Hangman (Model for the hangman game) *new*
+	- Scrambled (Model for the scrambled game) *new*
+	- Trivia (Model for the scrambled game) *new*
 	- Utils (File containing several utility functions required by the bot) *new*
 	
       
