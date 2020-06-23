@@ -1,5 +1,8 @@
+from difflib import SequenceMatcher
 from random import random
 
+from models.db_ops import DBOperation
+from models.enums import GameTypes
 from models.game import Game
 
 
@@ -10,6 +13,19 @@ class Scrambled(Game):
         super().__init__(word_num, False)
         self.unscrambled_word = self.choose_word()
         self.scrambled_word = self.get_scrambled_word(self.unscrambled_word)
+
+    async def guess(self, word, user_id):
+        if SequenceMatcher(a=word, b=self.unscrambled_word.lower()).ratio() > 0.94:
+            db = await DBOperation.new()
+            try:
+                self.active = False
+                x = await db.get_game_score(user_id, GameTypes.unscramble)
+                if x is None:
+                    await db.add_new_game_score(user_id, GameTypes.unscramble, 1)
+                else:
+                    await db.update_game_score(user_id, x.get("scrambled") + 1, GameTypes.unscramble)
+            finally:
+                await db.close()
 
     @staticmethod
     def shuffle_section(chars, section):
